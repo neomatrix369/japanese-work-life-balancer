@@ -28,6 +28,8 @@ When the PRD and the build spec disagree, **the build spec wins** (it records de
 ```
 japanese-work-life-balancer/
 ├── Makefile          # setup | data | model | ui | mcp | demo | test | clean
+├── scripts/
+│   └── dev.sh        # started by `make demo`; spawns model, ui, mcp; logs → .logs/
 ├── CLAUDE.md
 ├── README.md
 ├── DEMO.md           # 5-minute demo script
@@ -36,6 +38,7 @@ japanese-work-life-balancer/
 ├── data-gen/         # Python generator (stdlib only, seeded) -> data-gen/out/*.json
 ├── model/            # Timefold Solver + Quarkus REST service (copied from quickstarts employee-scheduling)
 ├── ui/               # Vite + React + TypeScript dashboard
+│   └── src/tour/     # guided "Play demo" tour (steps.ts, runs.ts, narrate.ts, useTour.ts, fixtures/)
 └── mcp/              # Python MCP server (streamable HTTP) wrapping the model's REST API
 ```
 
@@ -45,7 +48,7 @@ japanese-work-life-balancer/
 |---|---|---|
 | model (Quarkus) | 8083 | `mvn quarkus:dev` |
 | ui (Vite) | 5173 | proxies `/api` → `http://localhost:8083` |
-| mcp (FastMCP) | 8765 | streamable HTTP at `/mcp` |
+| mcp (MCP SDK v2 MCPServer) | 8765 | streamable HTTP at `/mcp` |
 
 ## Core modeling decisions (short version)
 
@@ -53,10 +56,17 @@ japanese-work-life-balancer/
   A shift is *derived*: an employee works a day if they have ≥ 1 task that day. No separate shift entity.
 - **Score:** Hard / Medium / Soft (long-based). Medium = 1 per unassigned task.
 - **Health constraint added** (soft): penalize consecutive-day runs of 3+ (including days worked before the week).
+  The penalty is `(L − 2) × 480` per run of L ≥ 3 days **plus `AT_RISK_PERSON_PENALTY = 2400` once per at-risk employee**.
+  The per-person flat charge drives the solver to make people fully healthy, not just shorten their runs slightly.
 - **Weight presets** via `ConstraintWeightOverrides`: `health-first`, `balanced` (PRD equal weights), `cost-first`.
   Hard and medium constraints are identical in every preset.
 - **KPIs are computed after solving** in plain Java (`KpiCalculator`), not as shadow variables.
-- **Money is stored in JPY.** The UI converts to USD and GBP with fixed mock FX rates.
+- **Money is stored in JPY.** The UI converts to USD and GBP with fixed mock FX rates (1 USD = 150 JPY, 1 GBP = 195 JPY).
+- **Score-analysis fallback:** Timefold 2.7 Community edition does not return per-match counts; broken-constraint
+  `matchCount` is `null` and the UI shows "–". Enterprise edition fills in exact counts.
+- **Scenarios retuned:** `normal` targets ~50% load, `burnout` ~55% with ~30% of staff carrying in 2–5 days.
+  Original spec (65% / 85%) produced identical at-risk counts under both presets. Generator is seeded; exact counts
+  are printed at runtime and documented in `README.md → Scenarios`.
 
 ## Conventions
 
@@ -69,3 +79,15 @@ japanese-work-life-balancer/
 ## Cut order if time runs short
 
 1. Longevity view → 2. Hours-rather-not-work → 3. Pinning → 4. Profit metrics.
+
+## Working rules learned (from the build)
+
+- **UI agents: use a git worktree**, never work directly in the folder the live demo runs from. Symlink conflicts and
+  hot-reload interference cause hard-to-diagnose failures.
+- **Stage explicit paths:** `ui/node_modules` may be a symlink in a worktree. Always `git add ui/src/...` rather than
+  `git add -A` or `git add .` to avoid accidentally staging the symlink.
+- **Before merging any UI change**: run `npm test && npx tsc --noEmit && npm run build` in `ui/`, then do a quick
+  browser smoke-check at 1280 px and 390 px (especially the tour overlay and the replay bar).
+- **Tour fixtures are in `ui/src/tour/fixtures/`**: regenerate with `node ui/scripts/record-tour-fixtures.mjs`
+  (model must be running). Commit the updated fixtures alongside the UI change.
+- **Coming next:** ElevenLabs voice narration for the tour; UI design-polish pass.

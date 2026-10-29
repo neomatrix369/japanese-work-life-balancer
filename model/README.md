@@ -71,9 +71,10 @@ the KPIs (`ConsecutiveDays`). For Minimum rest, carry-in > 0 means "worked the d
 
 | Method | Path | Returns |
 |---|---|---|
+| GET | `/` | 303 redirect to `app.ui-url` (default `http://localhost:5173`); configurable in `application.properties` |
 | GET | `/demo-data` | scenario names (`*.json` in `app.data-dir`, without extension) |
 | GET | `/demo-data/{name}` | scenario JSON (unsolved) |
-| POST | `/schedules?preset=&limitSeconds=` | body = WorkSchedule JSON → job id (text) |
+| POST | `/schedules?preset=&limitSeconds=` | body = WorkSchedule JSON → job id (text). Missing/null body → 400 with hint to use `/schedules/scenario/{name}` |
 | POST | `/schedules/scenario/{name}?preset=&limitSeconds=` | job id (text) |
 | GET | `/schedules` | job ids |
 | GET | `/schedules/{jobId}` | `{schedule, kpis, perEmployee, shifts, unassigned, longevity, brokenConstraints, preset, status, score}` |

@@ -1,5 +1,9 @@
 # Kickoff Prompt — Japanese Work-Life Balancer
 
+> **Implementation status (as of 2026-10-29, commit fac062c):** All phases complete. Model on :8083, UI on :5173,
+> MCP on :8765. Key deviations from the original spec are documented in `docs/plan/claude-code-prompt.md` and in
+> `README.md → What is mocked or simplified`. Start with `make demo` for a running system.
+
 Run Claude Code from the project root:
 
 ```bash
