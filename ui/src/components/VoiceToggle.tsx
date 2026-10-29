@@ -14,6 +14,15 @@ export function VoiceToggle({ voice }: { voice: TourVoice }) {
       >
         {voice.muted ? '🔇' : '🔊'}
       </button>
+      {!voice.muted && voice.voiceId && !voice.browserVoice && (
+        <span
+          className="tour-voice-note"
+          title={`ElevenLabs voice ID: ${voice.voiceId}`}
+          style={{ alignSelf: 'center', fontSize: 10, color: 'var(--fg-muted, #64748b)', fontFamily: 'monospace' }}
+        >
+          {voice.voiceId.slice(0, 8)}…
+        </span>
+      )}
       {voice.browserVoice && (
         <span
           className="tour-voice-note"

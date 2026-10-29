@@ -240,6 +240,10 @@ export function ttsPlugin(): Plugin {
     let handler: ((body: unknown) => Promise<TtsResult>) | null = null;
     let handlerKey: string | undefined;
     const middleware = async (req: NodeReq, res: NodeRes) => {
+      if (req.method === 'GET') {
+        send(res, json(200, { voiceId, modelId }));
+        return;
+      }
       if (req.method !== 'POST') {
         send(res, json(405, { error: 'method_not_allowed' }));
         return;
