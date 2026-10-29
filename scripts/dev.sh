@@ -70,7 +70,7 @@ printf '\n==> Model is ready.\n'
 printf '==> Starting UI (Vite on :5173)...\n'
 (
   cd "${PROJECT_ROOT}/ui"
-  exec npm run dev
+  exec env ELEVENLABS_VOICE_ID="${ELEVENLABS_VOICE_ID:-onwK4e9ZLuTAKqWW03F9}" npm run dev
 ) > "${LOGS_DIR}/ui.log" 2>&1 &
 UI_PID=$!
 
