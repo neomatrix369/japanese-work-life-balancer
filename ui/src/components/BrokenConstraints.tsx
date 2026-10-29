@@ -1,5 +1,6 @@
 import React from 'react';
 import type { BrokenConstraint } from '../api';
+import { CollapsiblePanel } from './CollapsiblePanel';
 
 interface BrokenConstraintsProps {
   brokenConstraints: BrokenConstraint[];
@@ -20,42 +21,31 @@ export function BrokenConstraints({ brokenConstraints, score }: BrokenConstraint
   // matchCount can be null when the server doesn't provide a count; treat as 1 for badge purposes
   const hardCount = hard.reduce((s, c) => s + (c.matchCount ?? 1), 0);
 
-  return (
-    <div className="card">
-      <div className="card-title" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
-        Broken Constraints
-        <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 400, fontSize: 12, color: 'var(--fg-muted)' }}>
-          score: {score || '–'}
+  const summaryExtra = (
+    <>
+      <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 400, fontSize: 12, color: 'var(--fg-muted)', textTransform: 'none', letterSpacing: 0 }}>
+        score: {score || '–'}
+      </span>
+      {hardCount === 0 ? (
+        <span style={{ background: 'var(--green-bg)', color: 'var(--green)', borderRadius: 12, padding: '2px 10px', fontSize: 12, fontWeight: 700, textTransform: 'none', letterSpacing: 0 }}>
+          0 hard ✓
         </span>
-        {hardCount === 0 ? (
-          <span
-            style={{
-              background: 'var(--green-bg)',
-              color: 'var(--green)',
-              borderRadius: 12,
-              padding: '2px 10px',
-              fontSize: 12,
-              fontWeight: 700,
-            }}
-          >
-            0 hard ✓
-          </span>
-        ) : (
-          <span
-            style={{
-              background: 'var(--red-bg)',
-              color: 'var(--red)',
-              borderRadius: 12,
-              padding: '2px 10px',
-              fontSize: 12,
-              fontWeight: 700,
-            }}
-          >
-            {hardCount} hard ✗
-          </span>
-        )}
-      </div>
+      ) : (
+        <span style={{ background: 'var(--red-bg)', color: 'var(--red)', borderRadius: 12, padding: '2px 10px', fontSize: 12, fontWeight: 700, textTransform: 'none', letterSpacing: 0 }}>
+          {hardCount} hard ✗
+        </span>
+      )}
+    </>
+  );
 
+  return (
+    <CollapsiblePanel
+      id="broken-constraints"
+      title="Broken Constraints"
+      summaryExtra={summaryExtra}
+      dataTour="broken-constraints"
+      defaultOpen={true}
+    >
       {brokenConstraints.length === 0 ? (
         <div className="all-clear">✓ No constraints broken — plan is fully feasible</div>
       ) : (
@@ -79,6 +69,6 @@ export function BrokenConstraints({ brokenConstraints, score }: BrokenConstraint
           ))}
         </div>
       )}
-    </div>
+    </CollapsiblePanel>
   );
 }

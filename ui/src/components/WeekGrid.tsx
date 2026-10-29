@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import type { WorkSchedule, PerEmployeeKpi } from '../api';
 import type { Currency } from '../types';
 import { formatMoney } from '../fx';
+import { CollapsiblePanel } from './CollapsiblePanel';
 
 interface WeekGridProps {
   schedule: WorkSchedule;
@@ -85,14 +86,17 @@ export function WeekGrid({
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(schedule.weekStart, i));
   const publicHols = new Set(schedule.publicHolidays ?? []);
 
+  const title = (
+    <>
+      Week Grid — {schedule.name ?? ''}&nbsp;
+      <span style={{ fontWeight: 400, fontSize: 11, color: 'var(--fg-muted)', textTransform: 'none', letterSpacing: 0 }}>
+        Click row to see tasks
+      </span>
+    </>
+  );
+
   return (
-    <div className="card" data-tour="week-grid">
-      <div className="card-title">
-        Week Grid — {schedule.name ?? ''} &nbsp;
-        <span style={{ fontWeight: 400, fontSize: 11, color: 'var(--fg-muted)' }}>
-          Click row to see tasks
-        </span>
-      </div>
+    <CollapsiblePanel id="week-grid" title={title} dataTour="week-grid" defaultOpen={true}>
       <div className="week-grid-wrap" ref={wrapRef}>
         <table className="week-grid">
           <thead>
@@ -183,6 +187,6 @@ export function WeekGrid({
           <span className="cell-public-holiday" style={{ padding: '1px 8px', borderRadius: 4 }}>🎌</span> public holiday
         </span>
       </div>
-    </div>
+    </CollapsiblePanel>
   );
 }

@@ -1,4 +1,5 @@
 import React from 'react';
+import { CollapsiblePanel } from './CollapsiblePanel';
 import {
   BarChart,
   Bar,
@@ -56,14 +57,17 @@ export function HoursChart({ schedule, perEmployee }: HoursChartProps) {
 
   if (data.length === 0) return null;
 
+  const title = (
+    <>
+      Hours per Employee
+      <span style={{ fontWeight: 400, marginLeft: 8, fontSize: 11, color: 'var(--fg-muted)', textTransform: 'none', letterSpacing: 0 }}>
+        dashed line = weekly limit
+      </span>
+    </>
+  );
+
   return (
-    <div className="card">
-      <div className="card-title">
-        Hours per Employee
-        <span style={{ fontWeight: 400, marginLeft: 8, fontSize: 11, color: 'var(--fg-muted)' }}>
-          dashed line = weekly limit
-        </span>
-      </div>
+    <CollapsiblePanel id="hours-chart" title={title} dataTour="hours-chart" defaultOpen={true}>
       <div className="chart-wrap">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
@@ -126,6 +130,6 @@ export function HoursChart({ schedule, perEmployee }: HoursChartProps) {
           </BarChart>
         </ResponsiveContainer>
       </div>
-    </div>
+    </CollapsiblePanel>
   );
 }

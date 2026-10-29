@@ -86,6 +86,11 @@ export function TourOverlay(props: TourOverlayProps) {
   const [rect, setRect] = useState<Box | null>(null);
   const [viewport, setViewport] = useState({ width: window.innerWidth, height: window.innerHeight });
   const [size, setSize] = useState({ width: 360, height: 180 });
+  // On mobile, when the browser UI chrome slides away, window.innerHeight grows and
+  // position:fixed;bottom:0 would push the sheet below the visual viewport.
+  // Tracking visualViewport.offsetTop lets us shift the sheet's bottom inline style
+  // so it stays anchored to the visual viewport bottom, not the layout viewport bottom.
+  const [sheetBottom, setSheetBottom] = useState(0);
   const calloutRef = useRef<HTMLDivElement>(null);
   const scrolledFor = useRef<string | null>(null);
 
@@ -120,6 +125,24 @@ export function TourOverlay(props: TourOverlayProps) {
     setSize((s) => (s.width === next.width && s.height === next.height ? s : next));
   }, [text, stepId, viewport.width, running]);
 
+  // Keep the sheet anchored to the visual viewport bottom.
+  // On mobile, hiding the browser URL bar grows window.innerHeight without moving
+  // the visual viewport; visualViewport.offsetTop records the gap. Setting
+  // bottom = offsetTop keeps the sheet within the originally-configured viewport height.
+  useEffect(() => {
+    const update = () => {
+      const vv = window.visualViewport;
+      setSheetBottom(vv ? Math.max(0, Math.round(vv.offsetTop)) : 0);
+    };
+    update();
+    window.visualViewport?.addEventListener('resize', update);
+    window.visualViewport?.addEventListener('scroll', update);
+    return () => {
+      window.visualViewport?.removeEventListener('resize', update);
+      window.visualViewport?.removeEventListener('scroll', update);
+    };
+  }, []);
+
   // Move focus into the dialog when the tour opens.
   useEffect(() => {
     calloutRef.current?.querySelector<HTMLElement>('[data-autofocus]')?.focus();
@@ -127,7 +150,11 @@ export function TourOverlay(props: TourOverlayProps) {
 
   const sheet = viewport.width <= SHEET_BREAKPOINT;
   const pos = placeCallout(rect, size, viewport);
-  const style: React.CSSProperties = sheet ? {} : { top: pos.top, left: pos.left };
+  // When sheet: pin bottom to visual viewport (sheetBottom = vv.offsetTop).
+  // When callout: position by placeCallout coordinates.
+  const style: React.CSSProperties = sheet
+    ? { bottom: sheetBottom }
+    : { top: pos.top, left: pos.left };
 
   return (
     <div className="tour-root">
@@ -149,21 +176,25 @@ export function TourOverlay(props: TourOverlayProps) {
         aria-labelledby="tour-title"
         aria-describedby="tour-text"
       >
-        <div className="tour-head">
-          <span className="tour-step" aria-label={`Step ${index + 1} of ${total}`}>
-            {index + 1} / {total}
-          </span>
-          <h2 id="tour-title" className="tour-title">{title}</h2>
-          <button className="tour-x" onClick={onExit} aria-label="Exit tour" title="Exit (Esc)">×</button>
+        {/* tour-sheet-body scrolls on mobile so the controls below are always pinned */}
+        <div className="tour-sheet-body">
+          <div className="tour-head">
+            <span className="tour-step" aria-label={`Step ${index + 1} of ${total}`}>
+              {index + 1} / {total}
+            </span>
+            <h2 id="tour-title" className="tour-title">{title}</h2>
+            <button className="tour-x" onClick={onExit} aria-label="Exit tour" title="Exit (Esc)">×</button>
+          </div>
+          <p id="tour-text" className="tour-text" aria-live="polite">
+            {text}
+            {running && <span className="tour-running"> Solving…</span>}
+          </p>
+          {recorded && <div className="tour-recorded">(recorded run — the live model was not available)</div>}
+          <div className="tour-progress" aria-hidden="true">
+            <div className="tour-progress-fill" style={{ width: `${((index + 1) / total) * 100}%` }} />
+          </div>
         </div>
-        <p id="tour-text" className="tour-text" aria-live="polite">
-          {text}
-          {running && <span className="tour-running"> Solving…</span>}
-        </p>
-        {recorded && <div className="tour-recorded">(recorded run — the live model was not available)</div>}
-        <div className="tour-progress" aria-hidden="true">
-          <div className="tour-progress-fill" style={{ width: `${((index + 1) / total) * 100}%` }} />
-        </div>
+        {/* controls + hint are always visible — never inside the scrollable body */}
         <div className="tour-controls">
           {isLast ? (
             <>

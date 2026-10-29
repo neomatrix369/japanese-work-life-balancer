@@ -3,6 +3,7 @@ import type { CompanyKpis } from '../api';
 import type { Currency } from '../types';
 import { formatMoney } from '../fx';
 import { KPI_HELP } from '../kpiHelp';
+import { CollapsiblePanel } from './CollapsiblePanel';
 
 interface KpiCardsProps {
   kpis: CompanyKpis;
@@ -102,8 +103,14 @@ export function KpiCards({ kpis, currency, baselineKpis }: KpiCardsProps) {
   return (
     <div className="kpi-groups" data-tour="kpis">
       {/* Health group */}
-      <div className="kpi-group" data-tour="kpi-health">
-        <div className="kpi-group-label health">Health</div>
+      <CollapsiblePanel
+        id="kpi-health"
+        title={<span style={{ color: 'var(--green)' }}>Health</span>}
+        dataTour="kpi-health"
+        defaultOpen={true}
+        className="kpi-group"
+        style={{ marginBottom: 0 }}
+      >
         <div className="kpi-grid">
           <KpiCard
             label="Healthy share"
@@ -131,11 +138,17 @@ export function KpiCards({ kpis, currency, baselineKpis }: KpiCardsProps) {
             sub="paid time with no task"
           />
         </div>
-      </div>
+      </CollapsiblePanel>
 
       {/* Business group */}
-      <div className="kpi-group" data-tour="kpi-business">
-        <div className="kpi-group-label business">Business</div>
+      <CollapsiblePanel
+        id="kpi-business"
+        title={<span style={{ color: 'var(--primary)' }}>Business</span>}
+        dataTour="kpi-business"
+        defaultOpen={true}
+        className="kpi-group"
+        style={{ marginBottom: 0 }}
+      >
         <div className="kpi-grid">
           <KpiCard
             label="Labor cost"
@@ -162,7 +175,7 @@ export function KpiCards({ kpis, currency, baselineKpis }: KpiCardsProps) {
             deltaInfo={dUnassigned}
           />
         </div>
-      </div>
+      </CollapsiblePanel>
     </div>
   );
 }

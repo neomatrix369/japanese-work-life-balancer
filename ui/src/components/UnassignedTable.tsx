@@ -1,5 +1,6 @@
 import React from 'react';
 import type { UnassignedTask } from '../api';
+import { CollapsiblePanel } from './CollapsiblePanel';
 
 interface UnassignedTableProps {
   unassigned: UnassignedTask[];
@@ -26,29 +27,31 @@ function formatTaskDateTime(iso: string): string {
 }
 
 export function UnassignedTable({ unassigned }: UnassignedTableProps) {
-  return (
-    <div className="card" data-tour="unassigned">
-      <div className="card-title">
-        Unassigned Tasks
-        <span
-          style={{
-            marginLeft: 8,
-            background:
-              unassigned.length === 0
-                ? 'var(--green-bg)'
-                : 'var(--amber-bg)',
-            color:
-              unassigned.length === 0 ? 'var(--green)' : 'var(--amber)',
-            borderRadius: 12,
-            padding: '1px 8px',
-            fontSize: 11,
-            fontWeight: 700,
-          }}
-        >
-          {unassigned.length}
-        </span>
-      </div>
+  const countBadge = (
+    <span
+      style={{
+        background: unassigned.length === 0 ? 'var(--green-bg)' : 'var(--amber-bg)',
+        color: unassigned.length === 0 ? 'var(--green)' : 'var(--amber)',
+        borderRadius: 12,
+        padding: '1px 8px',
+        fontSize: 11,
+        fontWeight: 700,
+        textTransform: 'none',
+        letterSpacing: 0,
+      }}
+    >
+      {unassigned.length}
+    </span>
+  );
 
+  return (
+    <CollapsiblePanel
+      id="unassigned"
+      title="Unassigned Tasks"
+      summaryExtra={countBadge}
+      dataTour="unassigned"
+      defaultOpen={true}
+    >
       {unassigned.length === 0 ? (
         <div className="all-clear">✓ All tasks assigned</div>
       ) : (
@@ -90,6 +93,6 @@ export function UnassignedTable({ unassigned }: UnassignedTableProps) {
           </table>
         </div>
       )}
-    </div>
+    </CollapsiblePanel>
   );
 }

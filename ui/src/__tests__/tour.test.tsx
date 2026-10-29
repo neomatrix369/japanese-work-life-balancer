@@ -5,12 +5,14 @@
  *        callout (render, controls, viewport placement) and the App-level fallback path when
  *        the model is unreachable.
  */
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, renderHook, act } from '@testing-library/react';
 import React from 'react';
 import type { ScheduleResponse } from '../api';
 import { App } from '../App';
 import { TourOverlay, clampToViewport, placeCallout } from '../components/TourOverlay';
 import { loadRecording, playRecording, recordingFrames, solveWithFallback } from '../tour/runs';
+import { useTour, type TourController } from '../tour/useTour';
+import type { TourStep, TourTarget } from '../tour/steps';
 
 const LIVE = { score: '0hard/0medium/-1soft' } as unknown as ScheduleResponse;
 const RECORDED = { score: 'recorded' } as unknown as ScheduleResponse;
@@ -194,6 +196,79 @@ describe('TourOverlay', () => {
     // -- Then --
     expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
     expect(onReplay).toHaveBeenCalled();
+  });
+});
+
+describe('tour opens closed collapsible panels', () => {
+  const ctrl: TourController = {
+    solveLive: vi.fn().mockResolvedValue({}),
+    stopLive: vi.fn(),
+    applyFrame: vi.fn(),
+    show: vi.fn(),
+    keep: vi.fn(),
+  };
+
+  afterEach(() => {
+    document.querySelectorAll('[data-tour]').forEach((el) => el.remove());
+  });
+
+  it('opens a closed <details data-tour> when the tour navigates to its step', async () => {
+    /**
+     * Scenario: user collapsed the week-grid panel before starting the tour.
+     * Slice: tour panel integration.
+     * Given a <details data-tour="week-grid"> that is closed, when the tour advances to a
+     * step targeting "week-grid", then the panel is opened automatically.
+     */
+    // -- Given --
+    const panel = document.createElement('details');
+    panel.setAttribute('data-tour', 'week-grid');
+    panel.open = false;
+    document.body.appendChild(panel);
+
+    const steps: TourStep[] = [
+      { id: 'intro', title: 'Intro', target: null, text: () => 'Welcome' },
+      { id: 'grid', title: 'Grid', target: 'week-grid' as TourTarget, text: () => 'Look at the grid' },
+    ];
+
+    // -- When --
+    const { result } = renderHook(() =>
+      useTour(ctrl, { current: null, currency: 'JPY' }, steps),
+    );
+    act(() => { result.current.start(); });
+    expect(panel.open).toBe(false); // intro step — not targeted yet
+
+    act(() => { result.current.next(); });
+    // -- Then --
+    await waitFor(() => expect(panel.open).toBe(true));
+  });
+
+  it('restores panel to closed when the tour exits', async () => {
+    /**
+     * Scenario: the tour opened a panel; on exit the user's previous preference is restored.
+     * Slice: tour panel integration.
+     * Given a closed panel that the tour opens, when exit() is called, then the panel
+     * returns to closed.
+     */
+    // -- Given --
+    const panel = document.createElement('details');
+    panel.setAttribute('data-tour', 'longevity');
+    panel.open = false;
+    document.body.appendChild(panel);
+
+    const steps: TourStep[] = [
+      { id: 'view', title: 'View', target: 'longevity' as TourTarget, text: () => 'HR view' },
+    ];
+
+    const { result } = renderHook(() =>
+      useTour(ctrl, { current: null, currency: 'JPY' }, steps),
+    );
+    // -- When --
+    act(() => { result.current.start(); });
+    await waitFor(() => expect(panel.open).toBe(true));
+
+    act(() => { result.current.exit(); });
+    // -- Then --
+    expect(panel.open).toBe(false);
   });
 });
 

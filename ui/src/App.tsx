@@ -26,6 +26,7 @@ import { BrokenConstraints } from './components/BrokenConstraints';
 import { CompareRuns, type SavedRun } from './components/CompareRuns';
 import { LongevityView } from './components/LongevityView';
 import { ReplayBar } from './components/ReplayBar';
+import { CollapsiblePanel } from './components/CollapsiblePanel';
 import { TourOverlay } from './components/TourOverlay';
 import { useTour, type TourController } from './tour/useTour';
 import { weekDates } from './tour/narrate';
@@ -365,19 +366,47 @@ export function App() {
 
       {/* Replay bar — shown after solve completes */}
       {showReplayBar && (
-        <div data-tour="replay">
+        <CollapsiblePanel
+          id="replay-bar"
+          title="Solver Replay"
+          dataTour="replay"
+          defaultOpen={true}
+          style={{ borderRadius: 0, borderLeft: 'none', borderRight: 'none', marginBottom: 0, borderTop: 'none', borderBottom: '2px solid var(--primary)' }}
+        >
           <ReplayBar
             snapshots={snapshots}
             replayIndex={replayIndex}
             onSeek={setReplayIndex}
           />
-        </div>
+        </CollapsiblePanel>
       )}
 
       {/* Main panels */}
       <div className="main-content">
+        {/* Collapse all / Expand all */}
+        {displayedResult && (
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+            <button
+              className="btn"
+              style={{ fontSize: 12 }}
+              onClick={() => {
+                const panels = document.querySelectorAll<HTMLDetailsElement>('details.panel-collapsible');
+                // If any panel is open, collapse all; otherwise expand all
+                const anyOpen = Array.from(panels).some((d) => d.open);
+                panels.forEach((d) => {
+                  d.open = !anyOpen;
+                  try { localStorage.setItem('jwlb.panel.' + d.id, String(!anyOpen)); } catch { /* ignore */ }
+                });
+              }}
+            >
+              {/* Label is computed on click; static label is fine for hackathon */}
+              ⊟ Collapse / Expand all
+            </button>
+          </div>
+        )}
+
         {/* KPI cards — show when there's any response.
-            data-tour anchors kpis-health / kpis-business live inside KpiCards. */}
+            data-tour anchors kpi-health / kpi-business live inside KpiCards. */}
         {displayedResult?.kpis && (
           <KpiCards
             kpis={displayedResult.kpis}
@@ -411,54 +440,46 @@ export function App() {
           />
         )}
 
-        {/* Hours chart */}
+        {/* Hours chart — CollapsiblePanel rendered by HoursChart itself */}
         {displayedResult?.schedule && Object.keys(perEmployee).length > 0 && (
-          <div data-tour="hours-chart">
-            <HoursChart
-              schedule={displayedResult.schedule}
-              perEmployee={perEmployee}
-            />
-          </div>
+          <HoursChart
+            schedule={displayedResult.schedule}
+            perEmployee={perEmployee}
+          />
         )}
 
-        {/* Unassigned tasks */}
+        {/* Unassigned tasks — CollapsiblePanel rendered by UnassignedTable */}
         {displayedResult && (
           <UnassignedTable unassigned={displayedResult.unassigned ?? []} />
         )}
 
-        {/* Broken constraints */}
+        {/* Broken constraints — CollapsiblePanel rendered by BrokenConstraints */}
         {displayedResult && (
-          <div data-tour="broken-constraints">
-            <BrokenConstraints
-              brokenConstraints={displayedResult.brokenConstraints ?? []}
-              score={displayedResult.score ?? ''}
-            />
-          </div>
+          <BrokenConstraints
+            brokenConstraints={displayedResult.brokenConstraints ?? []}
+            score={displayedResult.score ?? ''}
+          />
         )}
 
-        {/* Compare runs — collapsible panel at the bottom; collapsed by default.
-            The "Keep this run" button stays in the status line above for quick access. */}
-        <details
+        {/* Compare runs — collapsed by default; keep id for tour + existing tests */}
+        <CollapsiblePanel
           id="compare-panel"
-          data-tour="compare"
-          className="panel-collapsible"
+          title="Compare runs"
+          summaryExtra={
+            savedRun
+              ? <span className="compare-kept-label">Kept: {savedRun.label}</span>
+              : undefined
+          }
+          defaultOpen={false}
+          dataTour="compare"
         >
-          <summary className="panel-collapsible-summary">
-            <span>Compare runs</span>
-            {savedRun && (
-              <span className="compare-kept-label">Kept: {savedRun.label}</span>
-            )}
-            <span className="panel-chevron" aria-hidden="true">›</span>
-          </summary>
-          <div className="panel-collapsible-content">
-            <CompareRuns
-              savedRun={savedRun}
-              currentResponse={scheduleResponse}
-              onClear={() => setSavedRun(null)}
-              currency={currency}
-            />
-          </div>
-        </details>
+          <CompareRuns
+            savedRun={savedRun}
+            currentResponse={scheduleResponse}
+            onClear={() => setSavedRun(null)}
+            currency={currency}
+          />
+        </CollapsiblePanel>
       </div>
 
       {/* Employee side panel */}
