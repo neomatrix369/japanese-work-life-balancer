@@ -2,7 +2,7 @@
  * Render smoke tests — verify that individual panels render without crashing
  * when fed the real API sample response. No backend required.
  */
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import React from 'react';
 
 import { normalizePerEmployee } from '../api';
@@ -173,6 +173,24 @@ describe('WeekGrid', () => {
     // Each employee name should appear as a cell
     expect(screen.getByText('Aoki Haruto')).toBeTruthy();
     expect(screen.getByText('Sakamoto Rin')).toBeTruthy();
+  });
+});
+
+// ---------- KPI info buttons ----------
+
+describe('KpiCards info buttons', () => {
+  it('clicking ⓘ on At-risk employees shows its explanation and toggles aria-expanded', () => {
+    render(<KpiCards kpis={sample.kpis} currency="JPY" />);
+    const btn = screen.getByRole('button', { name: 'What is At-risk employees?' });
+    // Starts closed
+    expect(btn).toHaveAttribute('aria-expanded', 'false');
+    // Open it
+    fireEvent.click(btn);
+    expect(btn).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText(/work 3 or more days in a row/i)).toBeTruthy();
+    // Close it again
+    fireEvent.click(btn);
+    expect(btn).toHaveAttribute('aria-expanded', 'false');
   });
 });
 

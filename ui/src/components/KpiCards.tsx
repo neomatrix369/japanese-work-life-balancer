@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { CompanyKpis } from '../api';
 import type { Currency } from '../types';
 import { formatMoney } from '../fx';
+import { KPI_HELP } from '../kpiHelp';
 
 interface KpiCardsProps {
   kpis: CompanyKpis;
@@ -41,12 +42,35 @@ function KpiCard({
   variant?: 'good' | 'warn' | 'bad';
   deltaInfo?: { text: string; cls: 'good' | 'bad' | 'neutral' };
 }) {
+  const [infoOpen, setInfoOpen] = useState(false);
+  const helpText = KPI_HELP[label];
+  const infoId = `kpi-info-${label.replace(/\s+/g, '-').toLowerCase()}`;
+
   return (
     <div className="kpi-card">
-      <div className="kpi-label">{label}</div>
+      <div className="kpi-label">
+        <span>{label}</span>
+        {helpText && (
+          <button
+            className="kpi-info-btn"
+            aria-label={`What is ${label}?`}
+            aria-expanded={infoOpen}
+            aria-controls={infoId}
+            onClick={() => setInfoOpen((v) => !v)}
+            onKeyDown={(e) => e.key === 'Escape' && setInfoOpen(false)}
+          >
+            ⓘ
+          </button>
+        )}
+      </div>
       <div className={`kpi-value${variant ? ` ${variant}` : ''}`}>{value}</div>
       {deltaInfo && (
         <div className={`kpi-delta kpi-delta-${deltaInfo.cls}`}>{deltaInfo.text}</div>
+      )}
+      {helpText && infoOpen && (
+        <div id={infoId} className="kpi-info-text" role="note">
+          {helpText}
+        </div>
       )}
       {sub && <div className="kpi-sub">{sub}</div>}
     </div>
