@@ -162,6 +162,86 @@ def skill_capacity(skill: str, employees: list[dict], public_holidays: list[str]
     )
 
 
+def healthy_capacity_for_employee(
+    emp: dict,
+    week_start: date,
+    public_holidays: list[str],
+) -> int:
+    """
+    Max minutes the employee can work this week WITHOUT ever having a run of 3+
+    consecutive worked days (counting their carry-in days before the week).
+
+    Rules:
+      - carry-in ≥ 2  → cannot work Monday (would be day 3)
+      - carry-in = 1  → Mon + Tue cannot both be worked (would be days 2+3)
+      - carry-in = 0  → no restriction at start of week
+
+    Each worked day contributes min(availability_minutes, maxHoursPerDay*60).
+    Total is capped at maxHoursPerWeek*60.
+    Approved and public holidays are treated as 0-availability days (no work possible,
+    run resets on those days, same as a scheduled day off).
+
+    Uses exhaustive search over 2^7 = 128 subsets of the 7-day week.
+    """
+    carry_in    = min(emp.get("consecutiveDaysBeforeWeek", 0), 7)
+    approved    = set(emp.get("approvedHolidays", []))
+    pub_set     = set(public_holidays)
+    max_week    = emp["maxHoursPerWeek"] * 60
+
+    # Per-day available minutes (0 = cannot / must not work)
+    day_avail: list[int] = []
+    for offset in range(7):
+        d     = week_start + timedelta(days=offset)
+        d_str = fmt_date(d)
+        if d_str in approved or d_str in pub_set:
+            day_avail.append(0)
+            continue
+        w = _emp_avail_window(emp, d_str)
+        if w is None:
+            day_avail.append(0)
+        else:
+            ws, we = w
+            day_avail.append(min(we - ws, emp["maxHoursPerDay"] * 60))
+
+    initial_run = min(carry_in, 2)
+    best        = 0
+
+    for mask in range(128):  # 2^7 subsets
+        run   = initial_run
+        total = 0
+        valid = True
+
+        for day in range(7):
+            if (mask >> day) & 1:
+                if day_avail[day] == 0:
+                    valid = False   # can't work a 0-availability day
+                    break
+                if run >= 2:
+                    valid = False   # would be 3rd consecutive day
+                    break
+                run   += 1
+                total += day_avail[day]
+            else:
+                run = 0
+
+        if valid:
+            best = max(best, min(total, max_week))
+
+    return best
+
+
+def total_healthy_capacity(
+    employees: list[dict],
+    week_start: date,
+    public_holidays: list[str],
+) -> int:
+    """Sum of healthy_capacity_for_employee across all employees."""
+    return sum(
+        healthy_capacity_for_employee(e, week_start, public_holidays)
+        for e in employees
+    )
+
+
 # ---------------------------------------------------------------------------
 # Employee generation
 # ---------------------------------------------------------------------------
@@ -260,10 +340,12 @@ def make_employees(
             })
 
         # History
-        if burnout_mode and rng.random() < 0.60:
+        # Ordinary carry-in is 0–1 (carry-in=2 already pre-loads Mon as 3rd day).
+        # Burnout scenario: 30% of staff arrive with 2–5 days already worked in a row.
+        if burnout_mode and rng.random() < 0.30:
             consecutive_before = rng.randint(2, 5)
         else:
-            consecutive_before = rng.randint(0, 2)
+            consecutive_before = rng.randint(0, 1)
 
         holiday_remaining = rng.randint(0, 20)
         tenure_years      = round(rng.uniform(0, 25), 1)
@@ -352,26 +434,46 @@ def make_tasks(
     pub_set = set(public_holidays)
 
     # Capacity tracking for ensure_no_unassigned
-    emp_day_used: dict[str, dict[str, int]] = {e["id"]: {} for e in employees}
-    emp_week_used: dict[str, int]            = {e["id"]: 0  for e in employees}
+    emp_day_used:    dict[str, dict[str, int]]              = {e["id"]: {} for e in employees}
+    emp_week_used:   dict[str, int]                         = {e["id"]: 0  for e in employees}
+    # Interval tracking: employee_id -> date_str -> list of (start_min, end_min)
+    emp_intervals:   dict[str, dict[str, list]]             = {e["id"]: {} for e in employees}
+    # Dates worked (for minRestHours check)
+    emp_worked_dates: dict[str, set]                        = {e["id"]: set() for e in employees}
+
+    def _adj(d_str: str, delta: int) -> str:
+        return fmt_date(date.fromisoformat(d_str) + timedelta(days=delta))
 
     def can_fit(emp: dict, d_str: str, ts_min: int, dur: int) -> bool:
+        eid = emp["id"]
         if d_str in set(emp.get("approvedHolidays", [])):
             return False
+        # minRestHours > 16 means the 16 h gap between consecutive 09–17 days is
+        # insufficient: employee cannot work on a day adjacent to any already-booked day.
+        if emp["minRestHours"] > 16:
+            if _adj(d_str, -1) in emp_worked_dates[eid]:
+                return False
+            if _adj(d_str,  1) in emp_worked_dates[eid]:
+                return False
         w = _emp_avail_window(emp, d_str)
         if w is None:
             return False
         ws, we = w
         if ts_min < ws or ts_min + dur > we:
             return False
-        if emp_day_used[emp["id"]].get(d_str, 0) + dur > emp["maxHoursPerDay"] * 60:
+        # Time-overlap check against already-booked intervals on this day
+        te_min = ts_min + dur
+        for (existing_ts, existing_te) in emp_intervals[eid].get(d_str, []):
+            if ts_min < existing_te and te_min > existing_ts:
+                return False
+        if emp_day_used[eid].get(d_str, 0) + dur > emp["maxHoursPerDay"] * 60:
             return False
-        if emp_week_used[emp["id"]] + dur > emp["maxHoursPerWeek"] * 60:
+        if emp_week_used[eid] + dur > emp["maxHoursPerWeek"] * 60:
             return False
         return True
 
     def is_eligible(emp: dict, d_str: str, ts_min: int, dur: int) -> bool:
-        """Skills + availability only, no capacity tracking."""
+        """Skills + availability only, no capacity tracking — used for overloaded."""
         if d_str in set(emp.get("approvedHolidays", [])):
             return False
         w = _emp_avail_window(emp, d_str)
@@ -380,9 +482,12 @@ def make_tasks(
         ws, we = w
         return ts_min >= ws and ts_min + dur <= we
 
-    def book(emp: dict, d_str: str, dur: int) -> None:
-        emp_day_used[emp["id"]][d_str] = emp_day_used[emp["id"]].get(d_str, 0) + dur
-        emp_week_used[emp["id"]] = emp_week_used.get(emp["id"], 0) + dur
+    def book(emp: dict, d_str: str, ts_min: int, dur: int) -> None:
+        eid = emp["id"]
+        emp_intervals[eid].setdefault(d_str, []).append((ts_min, ts_min + dur))
+        emp_worked_dates[eid].add(d_str)
+        emp_day_used[eid][d_str]  = emp_day_used[eid].get(d_str, 0) + dur
+        emp_week_used[eid]        = emp_week_used.get(eid, 0) + dur
 
     tasks: list[dict] = []
     total_task_min = 0
@@ -437,7 +542,7 @@ def make_tasks(
                     continue
                 # Book the least-loaded eligible employee
                 best = min(eligible, key=lambda e: emp_week_used.get(e["id"], 0))
-                book(best, d_str, dur)
+                book(best, d_str, ts, dur)
             elif ensure_eligible:
                 # Skills + availability only (no capacity tracking)
                 eligible = [
@@ -576,6 +681,24 @@ def build_schedule(
     }
 
 
+def _peak_simultaneous(tasks: list[dict], d_str: str) -> int:
+    """Maximum number of tasks overlapping at any single minute on date d_str."""
+    events: list[tuple[int, int]] = []
+    for t in tasks:
+        if t["start"][:10] != d_str:
+            continue
+        ts = _time_to_min(t["start"][11:16])
+        te = ts + t["durationMinutes"]
+        events.append((ts,  +1))
+        events.append((te,  -1))
+    events.sort()
+    peak = cur = 0
+    for _, delta in events:
+        cur  += delta
+        peak  = max(peak, cur)
+    return peak
+
+
 def print_summary(scenario: str, schedule: dict) -> None:
     employees   = schedule["employees"]
     tasks       = schedule["tasks"]
@@ -590,18 +713,24 @@ def print_summary(scenario: str, schedule: dict) -> None:
     cap_hrs  = cap_min / 60
     ratio    = task_hrs / cap_hrs if cap_hrs else float("inf")
 
+    # Healthy capacity
+    hcap_min = total_healthy_capacity(employees, week_start, pub_list)
+    hcap_hrs = hcap_min / 60
+    h_ratio  = task_hrs / hcap_hrs if hcap_hrs else float("inf")
+
     # Per-day task minutes
     day_task_min: dict[str, int] = {}
     for t in tasks:
         d_str = t["start"][:10]
         day_task_min[d_str] = day_task_min.get(d_str, 0) + t["durationMinutes"]
 
-    # Per-day capacity
-    day_cap_min: dict[str, int] = {}
+    # Per-day capacity and available staff count
+    day_cap_min:   dict[str, int] = {}
+    day_avail_staff: dict[str, int] = {}
     for d_off in range(7):
         d     = week_start + timedelta(days=d_off)
         d_str = fmt_date(d)
-        dc    = 0
+        dc = staff = 0
         for emp in employees:
             if d_str in set(emp.get("approvedHolidays", [])):
                 continue
@@ -610,8 +739,10 @@ def print_summary(scenario: str, schedule: dict) -> None:
             w = _emp_avail_window(emp, d_str)
             if w:
                 ws, we = w
-                dc += min(we - ws, emp["maxHoursPerDay"] * 60)
-        day_cap_min[d_str] = dc
+                dc    += min(we - ws, emp["maxHoursPerDay"] * 60)
+                staff += 1
+        day_cap_min[d_str]    = dc
+        day_avail_staff[d_str] = staff
 
     # Tasks per skill
     skill_count: dict[str, int] = {s: 0 for s in ALL_SKILLS}
@@ -622,13 +753,13 @@ def print_summary(scenario: str, schedule: dict) -> None:
     tasks_on_pub = sum(1 for t in tasks if t["start"][:10] in pub_set)
 
     print(f"\n=== {scenario} ===")
-    print(f"  Employees : {n_emp}")
-    print(f"  Tasks     : {n_tasks}")
-    print(f"  Task hours: {task_hrs:.1f} h")
-    print(f"  Capacity  : {cap_hrs:.1f} h")
-    print(f"  Ratio     : {ratio:.1%}")
+    print(f"  Employees        : {n_emp}")
+    print(f"  Tasks            : {n_tasks}")
+    print(f"  Task hours       : {task_hrs:.1f} h")
+    print(f"  Capacity         : {cap_hrs:.1f} h   (ratio {ratio:.1%})")
+    print(f"  Healthy capacity : {hcap_hrs:.1f} h   (task/healthy ratio {h_ratio:.1%})")
     print(f"  Tasks on public holidays: {tasks_on_pub}")
-    print(f"  Per-day task hours / capacity:")
+    print(f"  Per-day  task h / cap h  (load%)  peak-simultaneous / available-staff:")
     for d_off in range(7):
         d         = week_start + timedelta(days=d_off)
         d_str     = fmt_date(d)
@@ -636,8 +767,13 @@ def print_summary(scenario: str, schedule: dict) -> None:
         th        = day_task_min.get(d_str, 0) / 60
         cap       = day_cap_min.get(d_str, 0) / 60
         r         = (th / cap * 100) if cap else 0
+        peak      = _peak_simultaneous(tasks, d_str)
+        staff     = day_avail_staff.get(d_str, 0)
         ph        = "  [PUBLIC HOLIDAY]" if d_str in pub_set else ""
-        print(f"    {day_name}: {th:.1f}h tasks / {cap:.1f}h cap  ({r:.0f}%){ph}")
+        print(
+            f"    {day_name}: {th:5.1f}h / {cap:5.1f}h  ({r:3.0f}%)"
+            f"  peak {peak:3d} / {staff:3d} staff{ph}"
+        )
     print(f"  Tasks per skill:")
     for sk, cnt in sorted(skill_count.items()):
         print(f"    {sk:25s}: {cnt}")
@@ -677,7 +813,7 @@ def main() -> None:
     emps_norm = make_employees(rng, 50, WEEK_A)
     tasks_norm = make_tasks(
         rng, WEEK_A, emps_norm, [],
-        target_ratio=0.65,
+        target_ratio=0.50,
         pinned_count=3,
         ensure_no_unassigned=True,
     )
@@ -709,11 +845,13 @@ def main() -> None:
     holiday = build_schedule("holiday", WEEK_H, emps_hol, tasks_hol, [CULTURE_DAY])
 
     # ----- 5. burnout -----
+    # 30% of staff with 2–5 days carry-in; load ~0.55 of total capacity so that
+    # health-first can meaningfully beat cost-first (task/healthy-capacity ratio ~0.9).
     rng = random.Random(seeds[4])
     emps_burn = make_employees(rng, 50, WEEK_A, burnout_mode=True)
     tasks_burn = make_tasks(
         rng, WEEK_A, emps_burn, [],
-        target_ratio=0.85,
+        target_ratio=0.55,
         ensure_no_unassigned=True,
     )
     burnout = build_schedule("burnout", WEEK_A, emps_burn, tasks_burn, [])
