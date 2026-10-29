@@ -43,9 +43,15 @@ task that day. Score: `HardMediumSoftScore` (long-based; the 2.x name of `HardMe
 | Labor cost | Soft | ¥100 (hourlyRate × hours / 100, rounded) |
 | Requested day off | Soft | 480 per date |
 | Avoided hours | Soft | overlap minutes |
-| Consecutive days risk | Soft | (L − 2) × 480 per run of L ≥ 3 days |
+| Consecutive days risk | Soft | (L − 2) × 480 per run of L ≥ 3 days, **plus 2400 once per at-risk employee** |
 
 Soft units are all "about minutes" (480 = one shift), so equal weights are meaningful.
+
+**Why the one-off 2400 charge:** the `atRisk` KPI counts *people* with any run of 3+ days, but (L − 2) × 480 alone
+counts *extra days* summed over people. With only the day charge, the solver shortens many runs a little and leaves
+every one of those people at risk (burnout: 41–42 at risk under both presets). 2400 = five shifts: making one
+person fully healthy is worth as much as removing five extra days elsewhere. Under health-first (weight 10) that is
+24,000 per person.
 
 **Consecutive days and carry-in:** `consecutiveDaysBeforeWeek` extends a run only if the employee also works on
 day 0 (the Monday). If they are off on Monday, the old run has ended. The same rule is used for the constraint and

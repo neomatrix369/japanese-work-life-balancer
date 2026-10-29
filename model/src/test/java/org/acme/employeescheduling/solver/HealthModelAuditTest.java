@@ -90,21 +90,22 @@ class HealthModelAuditTest {
         // Scenario: Mon-Fri run, then Wed removed; carry-in only extends a run that starts on Monday.
         // Slice: item 1 of the audit.
         // Given/When/Then per assertion below.
-        assertThat(ConsecutiveDays.penalty(Set.of(0, 1, 2, 3, 4), 0)).isEqualTo(3 * 480);
+        assertThat(ConsecutiveDays.penalty(Set.of(0, 1, 2, 3, 4), 0)).isEqualTo(3 * 480 + ConsecutiveDays.AT_RISK_PERSON_PENALTY);
         assertThat(ConsecutiveDays.penalty(Set.of(0, 1, 3, 4), 0)).isZero();
-        assertThat(ConsecutiveDays.penalty(Set.of(0, 1, 2, 3), 0)).isEqualTo(2 * 480);
+        assertThat(ConsecutiveDays.penalty(Set.of(0, 1, 2, 3), 0)).isEqualTo(2 * 480 + ConsecutiveDays.AT_RISK_PERSON_PENALTY);
         // Carry-in 2: Mon-Fri = run 7 -> 5*480; drop Mon -> Tue-Fri run 4 (carry gone) -> 2*480.
-        assertThat(ConsecutiveDays.penalty(Set.of(0, 1, 2, 3, 4), 2)).isEqualTo(5 * 480);
-        assertThat(ConsecutiveDays.penalty(Set.of(1, 2, 3, 4), 2)).isEqualTo(2 * 480);
+        // Every at-risk case also carries the one-off per-person charge.
+        assertThat(ConsecutiveDays.penalty(Set.of(0, 1, 2, 3, 4), 2)).isEqualTo(5 * 480 + ConsecutiveDays.AT_RISK_PERSON_PENALTY);
+        assertThat(ConsecutiveDays.penalty(Set.of(1, 2, 3, 4), 2)).isEqualTo(2 * 480 + ConsecutiveDays.AT_RISK_PERSON_PENALTY);
         // Carry-in 2, only Mon worked: run 3 -> 480 (Mon itself is risky after 2 days before the week).
-        assertThat(ConsecutiveDays.penalty(Set.of(0), 2)).isEqualTo(480);
+        assertThat(ConsecutiveDays.penalty(Set.of(0), 2)).isEqualTo(480 + ConsecutiveDays.AT_RISK_PERSON_PENALTY);
 
         // Same through the real constraint stream.
         Employee amy = employee("E-001", 2500, 0);
         VERIFIER.verifyThat(WorkScheduleConstraintProvider::consecutiveDaysRisk)
                 .given(amy, fullDay("T-0", 0, amy), fullDay("T-1", 1, amy), fullDay("T-2", 2, amy),
                         fullDay("T-3", 3, amy), fullDay("T-4", 4, amy))
-                .penalizesBy(3 * 480);
+                .penalizesBy(3 * 480 + ConsecutiveDays.AT_RISK_PERSON_PENALTY);
         VERIFIER.verifyThat(WorkScheduleConstraintProvider::consecutiveDaysRisk)
                 .given(amy, fullDay("T-0", 0, amy), fullDay("T-1", 1, amy),
                         fullDay("T-3", 3, amy), fullDay("T-4", 4, amy))
@@ -117,7 +118,7 @@ class HealthModelAuditTest {
         // Slice: item 2 (other soft constraints vs the health penalty) and item 3 (presets reach the score).
         // Given the same two plans scored under health-first and cost-first,
         // When we compare the score of "Amy keeps Wed" vs "Ben takes Wed",
-        // Then health-first prefers Ben by ~14400 soft and cost-first prefers Amy only by the labor difference.
+        // Then health-first prefers Ben by ~38400 soft (3 extra days + the at-risk charge, x10) and cost-first prefers Amy only by the labor difference.
         Employee amy = employee("E-001", 2500, 0);
         Employee ben = employee("E-002", 4000, 0);
         for (String preset : List.of(Presets.HEALTH_FIRST, Presets.COST_FIRST)) {
@@ -131,7 +132,7 @@ class HealthModelAuditTest {
             System.out.printf("[audit] %s: keep=%s moved=%s delta=%d%n", preset, before, after, delta);
             // Labor: (4000-2500) * 8h / 100 = 120 per labor weight unit.
             if (preset.equals(Presets.HEALTH_FIRST)) {
-                assertThat(delta).isEqualTo(10 * 3 * 480 - 120);
+                assertThat(delta).isEqualTo(10 * (3 * 480 + ConsecutiveDays.AT_RISK_PERSON_PENALTY) - 120);
             } else {
                 assertThat(delta).isEqualTo(-5 * 120);
             }
@@ -143,7 +144,7 @@ class HealthModelAuditTest {
         // Scenario: identical plan, three presets. Slice: item 3.
         Employee amy = employee("E-001", 0, 2);
         List<Employee> employees = List.of(amy);
-        long raw = 5 * 480; // carry 2 + Mon-Fri = run of 7
+        long raw = 5 * 480 + ConsecutiveDays.AT_RISK_PERSON_PENALTY; // carry 2 + Mon-Fri = run of 7, at risk
         for (var entry : Presets.SOFT_WEIGHTS.entrySet()) {
             List<Task> tasks = List.of(fullDay("T-0", 0, amy), fullDay("T-1", 1, amy), fullDay("T-2", 2, amy),
                     fullDay("T-3", 3, amy), fullDay("T-4", 4, amy));

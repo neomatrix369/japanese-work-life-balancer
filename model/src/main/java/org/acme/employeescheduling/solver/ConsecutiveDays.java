@@ -51,15 +51,29 @@ public final class ConsecutiveDays {
         return runs(days, carryIn).stream().mapToInt(Integer::intValue).max().orElse(0);
     }
 
-    /** {@code sum over runs of (L - 2) * 480} for runs of length L >= 3. */
+    /**
+     * One-off charge per at-risk employee (any run of 3+ days), on top of the per-extra-day charge.
+     * <p>
+     * Why: the extra-day charge alone sums days across people, while the KPI counts people. Without this charge the
+     * solver happily trims run lengths of many people and leaves all of them at risk. 2400 = five full shifts, so
+     * making one person fully healthy is worth as much as removing five extra days spread over others.
+     */
+    public static final long AT_RISK_PERSON_PENALTY = 5 * PENALTY_PER_EXTRA_DAY;
+
+    /**
+     * {@code sum over runs of (L - 2) * 480} for runs of length L >= 3, plus {@link #AT_RISK_PERSON_PENALTY} once
+     * if the employee has any such run (the same definition as the {@code atRisk} KPI).
+     */
     public static long penalty(Set<Integer> days, int carryIn) {
         long total = 0;
+        boolean atRisk = false;
         for (int length : runs(days, carryIn)) {
             if (length >= AT_RISK_DAYS) {
                 total += (length - (AT_RISK_DAYS - 1)) * PENALTY_PER_EXTRA_DAY;
+                atRisk = true;
             }
         }
-        return total;
+        return atRisk ? total + AT_RISK_PERSON_PENALTY : total;
     }
 
     /** For each worked day: its position in its run (1 = first day), including carry-in. */

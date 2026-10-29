@@ -175,11 +175,11 @@ class WorkScheduleConstraintProviderTest {
     @Test
     void consecutiveDaysRisk() {
         Employee amy = employee("E-001");
-        // Mon-Wed = run of 3 -> (3-2)*480
+        // Mon-Wed = run of 3 -> (3-2)*480 + one-off at-risk charge
         verifier.verifyThat(WorkScheduleConstraintProvider::consecutiveDaysRisk)
                 .given(amy, task("T-1", MON, 9, 0, 60, amy), task("T-2", TUE, 9, 0, 60, amy),
                         task("T-3", WED, 9, 0, 60, amy))
-                .penalizesBy(480);
+                .penalizesBy(480 + ConsecutiveDays.AT_RISK_PERSON_PENALTY);
         // Mon + Wed: two runs of 1
         verifier.verifyThat(WorkScheduleConstraintProvider::consecutiveDaysRisk)
                 .given(amy, task("T-1", MON, 9, 0, 60, amy), task("T-3", WED, 9, 0, 60, amy))
@@ -190,13 +190,37 @@ class WorkScheduleConstraintProviderTest {
     void consecutiveDaysRiskCountsCarryIn() {
         Employee amy = employee("E-001");
         amy.setConsecutiveDaysBeforeWeek(3);
-        // 3 days before the week + Mon + Tue = run of 5 -> (5-2)*480
+        // 3 days before the week + Mon + Tue = run of 5 -> (5-2)*480 + one-off at-risk charge
         verifier.verifyThat(WorkScheduleConstraintProvider::consecutiveDaysRisk)
                 .given(amy, task("T-1", MON, 9, 0, 60, amy), task("T-2", TUE, 9, 0, 60, amy))
-                .penalizesBy(3 * 480);
+                .penalizesBy(3 * 480 + ConsecutiveDays.AT_RISK_PERSON_PENALTY);
         // Off on Monday: the carry-in run has ended.
         verifier.verifyThat(WorkScheduleConstraintProvider::consecutiveDaysRisk)
                 .given(amy, task("T-2", TUE, 9, 0, 60, amy))
+                .penalizesBy(0);
+    }
+
+    @Test
+    void consecutiveDaysRiskChargesEachAtRiskPersonOnce() {
+        Employee amy = employee("E-001");
+        Employee beth = employee("E-002");
+        LocalDate thu = MON.plusDays(3);
+        LocalDate fri = MON.plusDays(4);
+        LocalDate sat = MON.plusDays(5);
+        // Amy: two runs of 3 (Mon-Wed, Fri-Sun) -> 2 extra days, but only one at-risk charge.
+        // Beth: Mon + Wed + Fri -> healthy, no charge.
+        verifier.verifyThat(WorkScheduleConstraintProvider::consecutiveDaysRisk)
+                .given(amy, beth,
+                        task("T-1", MON, 9, 0, 60, amy), task("T-2", TUE, 9, 0, 60, amy),
+                        task("T-3", WED, 9, 0, 60, amy), task("T-4", fri, 9, 0, 60, amy),
+                        task("T-5", sat, 9, 0, 60, amy), task("T-6", sat.plusDays(1), 9, 0, 60, amy),
+                        task("T-7", MON, 11, 0, 60, beth), task("T-8", WED, 11, 0, 60, beth),
+                        task("T-9", fri, 11, 0, 60, beth))
+                .penalizesBy(2 * 480 + ConsecutiveDays.AT_RISK_PERSON_PENALTY);
+        // Mon-Tue, Wed off, Thu-Fri: runs of 2 only -> healthy, no charge at all.
+        verifier.verifyThat(WorkScheduleConstraintProvider::consecutiveDaysRisk)
+                .given(amy, task("T-1", MON, 9, 0, 60, amy), task("T-2", TUE, 9, 0, 60, amy),
+                        task("T-4", thu, 9, 0, 60, amy), task("T-5", fri, 9, 0, 60, amy))
                 .penalizesBy(0);
     }
 }
