@@ -11,3 +11,4 @@ timefold-license.pem
 .env
 .omc/
 **/.pytest_cache/
+.logs/
