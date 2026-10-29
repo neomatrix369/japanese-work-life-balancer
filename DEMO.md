@@ -11,6 +11,8 @@ Everything should already be running (`make demo` from the project root, or thre
 
 Have open: **http://localhost:5173** in Chrome or Firefox.
 
+Services at a glance: UI on :5173, model REST API on :8083, MCP server on :8765.
+
 ---
 
 ## Step 1 — The problem (45 s)
@@ -55,8 +57,13 @@ No clicks needed here. Just talk.
    | Idle hours | `{{NUMBER: idle hours, cost-first}}` | `{{NUMBER: idle hours, health-first}}` | |
 
 4. Point to the **broken constraints panel** — both runs show `0 hard`. No rule was ever broken.
+5. Scroll down to the **Solver replay bar**. Click **▶ Play** (or scrub the slider) to watch the solver
+   improve the plan from its first guess to the final result. Switch speed to **4×** to make it snappy.
+   Point out how the score improves with each step and how the week grid changes colour in real time.
 
-> *"Health-first uses a 10× penalty weight on consecutive-day runs. We go from {{NUMBER: at-risk, cost-first}} at-risk employees down to {{NUMBER: at-risk, health-first}}. That protection costs us {{NUMBER: profit delta GBP}} in profit this week — a number every HR director should be able to put in front of a board."*
+> *"Health-first uses a 10× penalty weight on consecutive-day runs. We go from {{NUMBER: at-risk, cost-first}} at-risk employees down to {{NUMBER: at-risk, health-first}}. That protection costs us {{NUMBER: profit delta GBP}} in profit this week — a number every HR director should be able to put in front of a board.*
+>
+> *And with the replay bar, you can see exactly how the solver got there — every improvement step, slowed down enough to explain."*
 
 ---
 
@@ -120,3 +127,4 @@ Point to the output — the same numbers, now in natural language.
 - **Score stuck at `INIT`?** The solve is still running. Wait for the spinner to stop or increase the time limit.
 - **Compare panel not showing?** You need to have clicked "Keep this run" after the first solve.
 - **MCP call fails?** Confirm the model is on :8083: `curl -s localhost:8083/demo-data`.
+  Confirm the MCP server is on :8765: `curl -s localhost:8765/mcp` (should return a 200 or a method-not-allowed, not a connection refused).

@@ -21,7 +21,7 @@ flowchart LR
     JSON["data-gen/out/<br/>*.json"]
     MODEL["model/<br/>Quarkus + Timefold<br/>:8083"]
     UI["ui/<br/>Vite + React<br/>:5173"]
-    MCP["mcp/<br/>FastMCP<br/>:8765"]
+    MCP["mcp/<br/>MCP SDK v2 MCPServer<br/>:8765"]
     CLAUDE["Claude (claude.ai<br/>or Claude Code)"]
 
     DG -->|writes| JSON
@@ -35,7 +35,7 @@ flowchart LR
 |---|---|---|
 | model (Quarkus + Timefold) | 8083 | `make model` |
 | ui (Vite + React) | 5173 | `make ui` |
-| mcp (FastMCP) | 8765 | `make mcp` |
+| mcp (MCP SDK v2) | 8765 | `make mcp` |
 
 ---
 
@@ -45,12 +45,12 @@ flowchart LR
 |---|---|---|
 | JDK | 21 | `java -version` |
 | Maven | 3.9 | `mvn -version` |
-| Node.js | 20 | `node -version` |
+| Node.js | 20 | `node --version` |
 | Python | 3.11 | `python3 --version` |
 | uv | any (optional) | `uv --version` |
 | jq | any (optional, for curl one-liners) | `jq --version` |
 
-**Timefold license** — the solver runs in evaluation mode without a license file.
+**Timefold license** — the solver runs in Community edition without a license file.
 If you have one, point to it via one of these (never commit the file):
 
 ```
@@ -108,8 +108,11 @@ make clean   # remove build outputs and data-gen/out/
 9. Inspect **broken constraints** — a healthy plan shows `0 hard`.
 10. Click **Keep this run for comparison**, then re-solve with a different preset.
     The **compare panel** shows deltas: labor cost, profit, at-risk count, healthy share, idle hours, unassigned.
-11. Switch **currency** (JPY / USD / GBP) via the top-bar selector (indicative fixed rates).
-12. Switch **role** (Manager / HR / Executive) to reveal the longevity view (HR and Executive only).
+11. Use the **Solver replay bar** (appears below the score line after solving) to replay how the solver
+    improved the plan step by step. Hit **▶ Play** or scrub the slider. Speed buttons (1×, 2×, 4×)
+    control playback pace; **Live** jumps back to the final result. Each step shows elapsed time and score.
+12. Switch **currency** (JPY / USD / GBP) via the top-bar selector (indicative fixed rates).
+13. Switch **role** (Manager / HR / Executive) to reveal the longevity view (HR and Executive only).
 
 ### Use it from Claude
 
@@ -217,13 +220,17 @@ behaviour, which makes the health–cost trade-off visible side by side in the c
 
 ## Scenarios
 
-| File | Week starts | Public holidays | Employees | Tasks | Load | Story |
+| File | Week starts | Public holidays | Employees | Tasks (approx.) | Load | Story |
 |---|---|---|---|---|---|---|
-| `tiny.json` | 2026-11-09 | none | 8 | 40 | ~60% | Debugging and unit tests |
-| `normal.json` | 2026-11-09 | none | 50 | 500 | ~65% | A regular week — all tasks should be assigned |
-| `overloaded.json` | 2026-11-09 | none | 50 | 500 | ~125% | More work than capacity → unassigned tasks with reasons; 0 hard |
-| `holiday.json` | 2026-11-02 | 2026-11-03 (Culture Day) | 50 | 500 | ~75% | ~20 tasks fall on the public holiday; ~10% of staff have approved holidays |
-| `burnout.json` | 2026-11-09 | none | 50 | 500 | ~85% | 60% of staff arrive with 2–5 consecutive days already worked — best preset-comparison scenario |
+| `tiny.json` | 2026-11-09 | none | 8 | ~55 | ~60% | Debugging (the model's unit tests use their own hand-written copy) |
+| `normal.json` | 2026-11-09 | none | 50 | ~250 | ~50% | A regular week — all tasks should be assigned |
+| `overloaded.json` | 2026-11-09 | none | 50 | ~650 | ~125% | More work than capacity → unassigned tasks with reasons; 0 hard |
+| `holiday.json` | 2026-11-02 | 2026-11-03 (Culture Day) | 50 | ~430 | ~80% | ~20 tasks fall on the public holiday; ~10% of staff have approved holidays |
+| `burnout.json` | 2026-11-09 | none | 50 | ~275 | ~55% | ~30% of staff arrive with 2–5 consecutive days already worked — best preset-comparison scenario |
+
+Task counts are tuned to hit the target load ratios, not fixed at a round number.
+The `burnout` scenario is calibrated so that `health-first` and `cost-first` produce visibly different
+at-risk counts without leaving too many tasks unassigned under either preset.
 
 ---
 
@@ -233,16 +240,33 @@ These simplifications were deliberate choices for the hackathon build:
 
 - **No persistence.** Solve jobs live in memory; restarting the model clears them.
 - **No authentication.** The role selector (Manager / HR / Executive) is a UI widget only; there is no login or access control.
-- **Fixed FX rates.** Currency conversion uses hardcoded rates (1 USD = 150 JPY, 1 GBP = 195 JPY), labelled "indicative" in the UI. <!-- VERIFY: confirm the exact rates used in ui/src/fx.ts -->
+- **Fixed FX rates.** Currency conversion uses hardcoded rates (1 USD = 150 JPY, 1 GBP = 195 JPY), labelled "indicative" in the UI.
 - **Invented retention figures.** Company retention data (`year1: 0.88, year3: 0.74, year5: 0.63`) is synthetic.
 - **Shifts are derived, not planned.** The solver assigns tasks to employees; a "shift" is derived as any day on which an employee has at least one task. The PRD described shifts as separate planned entities.
 - **KPIs computed post-solve.** Shadow variables from the PRD (idle hours, labor cost, etc.) are calculated in plain Java after solving, not as Timefold shadow variables.
-- **Health added as a soft constraint.** The PRD listed consecutive-day health metrics as reporting only; this build adds `Consecutive days risk` as a soft constraint (weight 10 in `health-first`, 0 in `cost-first`).
+- **Health added as a soft constraint.** The PRD listed consecutive-day health metrics as reporting only; this build adds `Consecutive days risk` as a soft constraint (weight 10 in `health-first`, 0 in `cost-first`). The constraint also adds a one-off per-person charge for employees whose run reaches 3+ days, which directly reduces the at-risk headcount KPI — the exact charge value is documented in [model/README.md](model/README.md).
 - **Soft penalties normalised.** Minutes and ¥100 units are used so equal preset weights are comparable.
+- **Broken-constraints `matchCount` shows "–".** Timefold Solver 2.7 Community edition's score analysis does not return per-match counts; the UI falls back to showing "–" for that column. Enterprise edition would show exact counts.
+- **Scenarios retuned for demonstrability.** The original spec called for 65% load in `normal` and 85% load / 60% carry-in in `burnout`. At those numbers, `burnout` had a provable floor of ~39 at-risk employees regardless of preset (Monday alone needed 46 concurrent staff but only 14 could safely work consecutive days), so `health-first` and `cost-first` would have looked identical. The generator was retuned: ordinary staff carry in 0–1 days (was 0–2); `normal` targets ~50% load; `burnout` targets ~55% load with ~30% of staff carrying in 2–5 days. Approximate achieved ratios are printed by the generator at runtime.
 
 ---
 
 ## Troubleshooting
+
+**Wrong Java or Maven version on PATH**
+```bash
+java -version   # must show 21+
+mvn -version    # must show 3.9+
+```
+On macOS with multiple JDKs, point Maven at Java 21:
+```bash
+export JAVA_HOME=$(/usr/libexec/java_home -v 21)
+make model   # or: make model JAVA_HOME=$(/usr/libexec/java_home -v 21)
+```
+Override Maven itself:
+```bash
+make model MVN=/usr/local/bin/mvn
+```
 
 **Port already in use**
 ```bash
@@ -251,34 +275,27 @@ lsof -ti :5173 | xargs kill   # ui
 lsof -ti :8765 | xargs kill   # mcp
 ```
 
-**Wrong Java or Maven version on PATH**
-```bash
-java -version   # must be 21+
-mvn -version    # must be 3.9+
-```
-On macOS with multiple JDKs: `export JAVA_HOME=$(/usr/libexec/java_home -v 21)`.
-
 **UI shows "Model not running"**
 The model takes 10–20 seconds to start. Wait for the Quarkus `Started in …` log line before loading the UI.
-Or run `make demo` which waits for the model to be ready before starting the other services.
-
-**Solver finishes but still shows hard violations**
-This should not happen in normal scenarios. If it does, increase the solve time:
-```bash
-curl -s -X POST "localhost:8083/schedules/scenario/normal?preset=health-first&limitSeconds=60"
-```
-The default is 30 seconds. The maximum accepted value is 60.
+`make demo` waits automatically — it polls `localhost:8083/demo-data` before starting the other services.
 
 **MCP server can't reach the model**
-Set the model URL before starting the MCP server:
+Set `MODEL_URL` before starting the MCP server:
 ```bash
 export MODEL_URL=http://localhost:8083
 make mcp
 ```
 
 **`make setup` warns about no license file**
-This is a warning, not a failure. The solver runs in evaluation mode. If you have a Timefold hackathon license,
+This is a warning, not a failure. The solver runs in Community edition. If you have a Timefold hackathon license,
 set `TIMEFOLD_LICENSE_PATH` as described in [Prerequisites](#prerequisites).
+
+**Solver finishes but still shows hard violations**
+This should not happen in normal scenarios. If it does, increase the solve time:
+```bash
+curl -s -X POST "localhost:8083/schedules/scenario/normal?preset=health-first&limitSeconds=60"
+```
+The default is 30 seconds; the maximum accepted value is 60.
 
 ---
 
@@ -287,6 +304,9 @@ set `TIMEFOLD_LICENSE_PATH` as described in [Prerequisites](#prerequisites).
 The model is derived from
 [TimefoldAI/timefold-quickstarts](https://github.com/TimefoldAI/timefold-quickstarts) (Apache-2.0),
 `use-cases/employee-scheduling` branch `stable`.
+
+The MCP server uses the official [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk)
+v2 `MCPServer` API (successor of the deprecated `FastMCP` class).
 
 All employee names and company data in the scenarios are **synthetic and fictional**.
 No real personal data, health records or company information is used anywhere.
