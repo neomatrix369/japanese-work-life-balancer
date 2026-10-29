@@ -78,39 +78,39 @@ export function KpiCards({ kpis, currency, baselineKpis }: KpiCardsProps) {
   return (
     <div className="kpi-groups">
       {/* Health group */}
-      <div className="kpi-group">
+      <div className="kpi-group" data-tour="kpis-health">
         <div className="kpi-group-label health">Health</div>
         <div className="kpi-grid">
           <KpiCard
             label="Healthy share"
             value={`${healthyPct}%`}
-            sub="≤2 consecutive days"
+            sub="never 3+ days in a row"
             variant={healthyPct >= 80 ? 'good' : healthyPct >= 60 ? 'warn' : 'bad'}
             deltaInfo={dHealthy}
           />
           <KpiCard
             label="At-risk employees"
             value={String(atRisk)}
-            sub="3+ consecutive days"
+            sub="work 3+ days in a row"
             variant={atRisk === 0 ? 'good' : atRisk <= 5 ? 'warn' : 'bad'}
             deltaInfo={dAtRisk}
           />
           <KpiCard
             label="Avg consecutive days"
             value={avgCons}
-            sub="this week"
+            sub="longest run per person"
             variant={Number(avgCons) < 2 ? 'good' : Number(avgCons) < 3 ? 'warn' : 'bad'}
           />
           <KpiCard
             label="Idle hours total"
             value={`${(kpis.idleHoursTotal ?? 0).toFixed(0)} h`}
-            sub="across all employees"
+            sub="paid time with no task"
           />
         </div>
       </div>
 
       {/* Business group */}
-      <div className="kpi-group">
+      <div className="kpi-group" data-tour="kpis-business">
         <div className="kpi-group-label business">Business</div>
         <div className="kpi-grid">
           <KpiCard

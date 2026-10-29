@@ -102,6 +102,48 @@ describe('LongevityView', () => {
   });
 });
 
+// ---------- App layout ----------
+
+describe('App layout', () => {
+  it('compare panel is a closed <details id="compare-panel"> by default', () => {
+    const { container } = render(
+      <details id="compare-panel">
+        <summary>Compare runs</summary>
+        <p>content</p>
+      </details>,
+    );
+    const details = container.querySelector('#compare-panel') as HTMLDetailsElement;
+    expect(details).toBeTruthy();
+    expect(details.open).toBe(false);
+  });
+
+  it('longevity renders before the week grid when both appear in the DOM', () => {
+    const { container } = render(
+      <>
+        <div data-tour="longevity">
+          <LongevityView longevity={sample.longevity} role="Manager" />
+        </div>
+        <div data-tour="week-grid">
+          <WeekGrid
+            schedule={sample.schedule}
+            perEmployee={perEmployee}
+            selectedEmployeeId={null}
+            onSelectEmployee={() => undefined}
+            currency="JPY"
+          />
+        </div>
+      </>,
+    );
+    const longevityEl = container.querySelector('[data-tour="longevity"]') as HTMLElement;
+    const weekGridEl = container.querySelector('[data-tour="week-grid"]') as HTMLElement;
+    // longevity must precede week-grid in DOM order
+    // compareDocumentPosition returns a bitmask; DOCUMENT_POSITION_FOLLOWING (4) means
+    // weekGridEl comes after longevityEl.
+    const pos = longevityEl.compareDocumentPosition(weekGridEl);
+    expect(pos & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+});
+
 // ---------- WeekGrid ----------
 
 describe('WeekGrid', () => {
@@ -133,3 +175,4 @@ describe('WeekGrid', () => {
     expect(screen.getByText('Sakamoto Rin')).toBeTruthy();
   });
 });
+

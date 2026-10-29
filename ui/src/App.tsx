@@ -239,7 +239,8 @@ export function App() {
         score={liveScore}
       />
 
-      {/* Status line */}
+      {/* Status line — includes the "Keep for comparison" action so it stays accessible
+          even after CompareRuns panel moves to the bottom of the page. */}
       <div className="status-line">
         <span
           className={`status-dot${solving ? ' solving' : scheduleResponse ? ' done' : ''}`}
@@ -259,6 +260,15 @@ export function App() {
             Pick a scenario and click Solve to begin.
           </span>
         )}
+        {scheduleResponse && (
+          <button
+            className="btn btn-primary"
+            onClick={handleSaveRun}
+            style={{ fontSize: 12 }}
+          >
+            📌 Keep this run for comparison
+          </button>
+        )}
         {(liveScore || scheduleResponse?.score) && (
           <span
             className={`score-text ${
@@ -273,16 +283,19 @@ export function App() {
 
       {/* Replay bar — shown after solve completes */}
       {showReplayBar && (
-        <ReplayBar
-          snapshots={snapshots}
-          replayIndex={replayIndex}
-          onSeek={setReplayIndex}
-        />
+        <div data-tour="replay">
+          <ReplayBar
+            snapshots={snapshots}
+            replayIndex={replayIndex}
+            onSeek={setReplayIndex}
+          />
+        </div>
       )}
 
       {/* Main panels */}
       <div className="main-content">
-        {/* KPI cards — show when there's any response */}
+        {/* KPI cards — show when there's any response.
+            data-tour anchors kpis-health / kpis-business live inside KpiCards. */}
         {displayedResult?.kpis && (
           <KpiCards
             kpis={displayedResult.kpis}
@@ -291,55 +304,80 @@ export function App() {
           />
         )}
 
-        {/* Compare runs — always uses the live/final result, not replay frame */}
-        <CompareRuns
-          savedRun={savedRun}
-          currentResponse={scheduleResponse}
-          onSave={handleSaveRun}
-          onClear={() => setSavedRun(null)}
-          currency={currency}
-        />
+        {/* Longevity view — directly after KPI cards, above the week grid */}
+        {displayedResult?.longevity && (
+          <div data-tour="longevity">
+            <LongevityView
+              longevity={displayedResult.longevity}
+              role={role}
+              perEmployeeList={Object.values(perEmployee)}
+            />
+          </div>
+        )}
 
         {/* Week grid */}
         {displayedResult?.schedule && (
-          <WeekGrid
-            schedule={displayedResult.schedule}
-            perEmployee={perEmployee}
-            selectedEmployeeId={selectedEmployeeId}
-            onSelectEmployee={setSelectedEmployeeId}
-            currency={currency}
-          />
+          <div data-tour="week-grid">
+            <WeekGrid
+              schedule={displayedResult.schedule}
+              perEmployee={perEmployee}
+              selectedEmployeeId={selectedEmployeeId}
+              onSelectEmployee={setSelectedEmployeeId}
+              currency={currency}
+            />
+          </div>
         )}
 
         {/* Hours chart */}
         {displayedResult?.schedule && Object.keys(perEmployee).length > 0 && (
-          <HoursChart
-            schedule={displayedResult.schedule}
-            perEmployee={perEmployee}
-          />
+          <div data-tour="hours-chart">
+            <HoursChart
+              schedule={displayedResult.schedule}
+              perEmployee={perEmployee}
+            />
+          </div>
         )}
 
         {/* Unassigned tasks */}
         {displayedResult && (
-          <UnassignedTable unassigned={displayedResult.unassigned ?? []} />
+          <div data-tour="unassigned">
+            <UnassignedTable unassigned={displayedResult.unassigned ?? []} />
+          </div>
         )}
 
         {/* Broken constraints */}
         {displayedResult && (
-          <BrokenConstraints
-            brokenConstraints={displayedResult.brokenConstraints ?? []}
-            score={displayedResult.score ?? ''}
-          />
+          <div data-tour="broken-constraints">
+            <BrokenConstraints
+              brokenConstraints={displayedResult.brokenConstraints ?? []}
+              score={displayedResult.score ?? ''}
+            />
+          </div>
         )}
 
-        {/* Longevity view */}
-        {displayedResult?.longevity && (
-          <LongevityView
-            longevity={displayedResult.longevity}
-            role={role}
-            perEmployeeList={Object.values(perEmployee)}
-          />
-        )}
+        {/* Compare runs — collapsible panel at the bottom; collapsed by default.
+            The "Keep this run" button stays in the status line above for quick access. */}
+        <details
+          id="compare-panel"
+          data-tour="compare"
+          className="panel-collapsible"
+        >
+          <summary className="panel-collapsible-summary">
+            <span>Compare runs</span>
+            {savedRun && (
+              <span className="compare-kept-label">Kept: {savedRun.label}</span>
+            )}
+            <span className="panel-chevron" aria-hidden="true">›</span>
+          </summary>
+          <div className="panel-collapsible-content">
+            <CompareRuns
+              savedRun={savedRun}
+              currentResponse={scheduleResponse}
+              onClear={() => setSavedRun(null)}
+              currency={currency}
+            />
+          </div>
+        </details>
       </div>
 
       {/* Employee side panel */}
