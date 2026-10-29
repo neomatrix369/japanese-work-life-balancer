@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import type { WorkSchedule, PerEmployeeKpi } from '../api';
 import type { Currency } from '../types';
 import { formatMoney } from '../fx';
@@ -74,6 +74,14 @@ export function WeekGrid({
   highlightDate = null,
 }: WeekGridProps) {
   const hl = (day: string) => (day === highlightDate ? ' col-highlight' : '');
+  const wrapRef = useRef<HTMLDivElement>(null);
+  // Keep a highlighted column visible inside the horizontal scroller (narrow screens).
+  useEffect(() => {
+    const wrap = wrapRef.current;
+    const th = wrap?.querySelector<HTMLElement>('th.col-highlight');
+    if (!wrap || !th) return;
+    wrap.scrollLeft = Math.max(0, th.offsetLeft - (wrap.clientWidth - th.offsetWidth) / 2);
+  }, [highlightDate]);
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(schedule.weekStart, i));
   const publicHols = new Set(schedule.publicHolidays ?? []);
 
@@ -85,7 +93,7 @@ export function WeekGrid({
           Click row to see tasks
         </span>
       </div>
-      <div className="week-grid-wrap">
+      <div className="week-grid-wrap" ref={wrapRef}>
         <table className="week-grid">
           <thead>
             <tr>
