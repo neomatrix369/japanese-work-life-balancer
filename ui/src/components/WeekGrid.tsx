@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import type { WorkSchedule, PerEmployeeKpi } from '../api';
 import type { Currency } from '../types';
 import { formatMoney } from '../fx';
+import { Flag, TreePalm } from 'lucide-react';
 
 interface WeekGridProps {
   schedule: WorkSchedule;
@@ -88,7 +89,7 @@ export function WeekGrid({
   return (
     <div className="card" data-tour="week-grid">
       <div className="card-title">
-        Week Grid — {schedule.name ?? ''} &nbsp;
+        Week grid: {schedule.name ?? ''} &nbsp;
         <span style={{ fontWeight: 400, fontSize: 11, color: 'var(--fg-muted)' }}>
           Click row to see tasks
         </span>
@@ -124,7 +125,7 @@ export function WeekGrid({
                   className={`clickable${isSelected ? ' selected' : ''}`}
                   onClick={() => onSelectEmployee(isSelected ? null : emp.id)}
                 >
-                  <td className="employee-name-cell" title={`${emp.id} — ${emp.skills?.join(', ')}`}>
+                  <td className="employee-name-cell" title={`${emp.id}: ${emp.skills?.join(', ')}`}>
                     {emp.name}
                   </td>
                   {weekDays.map((day) => {
@@ -136,9 +137,9 @@ export function WeekGrid({
                         {worked ? (
                           <span className="cell-hours">{hours.toFixed(1)}h</span>
                         ) : approvedHols.has(day) ? (
-                          '🏖'
+                          <TreePalm size={15} role="img" aria-label="Approved holiday" />
                         ) : publicHols.has(day) ? (
-                          '🎌'
+                          <Flag size={14} role="img" aria-label="Public holiday" />
                         ) : (
                           '–'
                         )}
@@ -177,10 +178,10 @@ export function WeekGrid({
           <span className="cell-run-4plus" style={{ padding: '1px 8px', borderRadius: 4 }}>4d+</span> at risk
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <span className="cell-approved-holiday" style={{ padding: '1px 8px', borderRadius: 4 }}>🏖</span> approved holiday
+          <span className="cell-approved-holiday" style={{ padding: '1px 8px', borderRadius: 4 }}><TreePalm size={13} aria-hidden="true" /></span> approved holiday
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <span className="cell-public-holiday" style={{ padding: '1px 8px', borderRadius: 4 }}>🎌</span> public holiday
+          <span className="cell-public-holiday" style={{ padding: '1px 8px', borderRadius: 4 }}><Flag size={12} aria-hidden="true" /></span> public holiday
         </span>
       </div>
     </div>

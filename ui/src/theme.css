@@ -507,7 +507,7 @@ code {
   margin: 0 0 var(--space-3);
   line-height: 1.4;
 }
-.card-title > span { letter-spacing: 0; vertical-align: 1px; }
+.card-title > span { letter-spacing: 0; vertical-align: 1px; font-weight: 500; }
 
 .week-grid-wrap {
   border: 1px solid var(--rule);
@@ -769,6 +769,34 @@ td svg, th svg { vertical-align: -2px; }
 @keyframes wlb-slide-in {
   from { opacity: 0.6; transform: translateX(24px); }
   to { opacity: 1; transform: none; }
+}
+
+/* ── Skeleton while the first solve result loads (DashboardSkeleton) ──────── */
+.visually-hidden {
+  position: absolute !important;
+  width: 1px; height: 1px; margin: -1px; padding: 0; border: 0;
+  overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
+}
+.skeleton-card { gap: 10px; }
+.skeleton {
+  display: block;
+  border-radius: 4px;
+  background-color: var(--surface-sunken);
+  background-image: linear-gradient(90deg, transparent 0, var(--row-hover) 40%, var(--surface-raised) 50%, var(--row-hover) 60%, transparent 100%);
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: wlb-shimmer 1.4s ease-in-out infinite;
+}
+.skeleton-line { height: 12px; }
+.skeleton-number { height: 28px; width: 45%; border-radius: var(--radius-sm); }
+.skeleton-grid { display: grid; gap: 6px; }
+.skeleton-row { height: 34px; border-radius: var(--radius-sm); }
+@keyframes wlb-shimmer {
+  from { background-position: 150% 0; }
+  to { background-position: -50% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; background-image: none; }
 }
 
 /* ── 10. Small screens (≤ 600 px) ─────────────────────────────────────────── */

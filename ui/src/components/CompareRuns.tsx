@@ -2,6 +2,7 @@ import React from 'react';
 import type { ScheduleResponse, CompanyKpis } from '../api';
 import type { Currency } from '../types';
 import { formatMoney } from '../fx';
+import { X } from 'lucide-react';
 
 export interface SavedRun {
   label: string;
@@ -107,7 +108,8 @@ export function CompareRuns({
       {savedRun && (
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
           <button className="btn" onClick={onClear} style={{ fontSize: 12 }}>
-            × Clear saved
+            <X size={14} aria-hidden="true" />
+            Clear saved
           </button>
         </div>
       )}

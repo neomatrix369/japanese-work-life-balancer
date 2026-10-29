@@ -1,4 +1,5 @@
 import React from 'react';
+import { CheckCircle2 } from 'lucide-react';
 import type { UnassignedTask } from '../api';
 
 interface UnassignedTableProps {
@@ -29,7 +30,7 @@ export function UnassignedTable({ unassigned }: UnassignedTableProps) {
   return (
     <div className="card" data-tour="unassigned">
       <div className="card-title">
-        Unassigned Tasks
+        Unassigned tasks
         <span
           style={{
             marginLeft: 8,
@@ -50,7 +51,7 @@ export function UnassignedTable({ unassigned }: UnassignedTableProps) {
       </div>
 
       {unassigned.length === 0 ? (
-        <div className="all-clear">✓ All tasks assigned</div>
+        <div className="all-clear"><CheckCircle2 size={16} aria-hidden="true" />All tasks assigned</div>
       ) : (
         <div className="scroll-x">
           <table className="data-table">

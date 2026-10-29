@@ -59,7 +59,7 @@ export function HoursChart({ schedule, perEmployee }: HoursChartProps) {
   return (
     <div className="card">
       <div className="card-title">
-        Hours per Employee
+        Hours per employee
         <span style={{ fontWeight: 400, marginLeft: 8, fontSize: 11, color: 'var(--fg-muted)' }}>
           dashed line = weekly limit
         </span>

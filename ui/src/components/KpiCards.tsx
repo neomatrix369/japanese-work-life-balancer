@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Info } from 'lucide-react';
 import type { CompanyKpis } from '../api';
 import type { Currency } from '../types';
 import { formatMoney } from '../fx';
@@ -59,7 +60,7 @@ function KpiCard({
             onClick={() => setInfoOpen((v) => !v)}
             onKeyDown={(e) => e.key === 'Escape' && setInfoOpen(false)}
           >
-            ⓘ
+            <Info size={14} aria-hidden="true" />
           </button>
         )}
       </div>

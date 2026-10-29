@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Preset, SolverStatus } from '../api';
 import type { Currency, Role } from '../types';
+import { Flower2, Play, Square } from 'lucide-react';
 import { ThemeControl } from './ThemeControl';
 
 interface TopBarProps {
@@ -47,7 +48,10 @@ export function TopBar({
 }: TopBarProps) {
   return (
     <div className="topbar" data-tour="controls">
-      <span className="topbar-title">🌸 Work-Life Balancer</span>
+      <span className="topbar-title">
+        <Flower2 size={18} aria-hidden="true" />
+        Work-Life Balancer
+      </span>
       <ThemeControl />
       {onPlayTour && (
         <button
@@ -57,25 +61,28 @@ export function TopBar({
           disabled={tourActive}
           title="A 3-minute guided story of one week, hands-free"
         >
-          ▶ Play demo
+          <Play size={14} aria-hidden="true" />
+          Play demo
         </button>
       )}
       <div className="sep" />
 
-      <label>Scenario</label>
+      <label htmlFor="topbar-scenario">Scenario</label>
       <select
+        id="topbar-scenario"
         value={selectedScenario}
         onChange={(e) => onScenarioChange(e.target.value)}
         disabled={solving}
       >
-        <option value="">— pick scenario —</option>
+        <option value="">Pick a scenario</option>
         {scenarios.map((s) => (
           <option key={s} value={s}>{s}</option>
         ))}
       </select>
 
-      <label>Preset</label>
+      <label htmlFor="topbar-preset">Preset</label>
       <select
+        id="topbar-preset"
         value={preset}
         onChange={(e) => onPresetChange(e.target.value as Preset)}
         disabled={solving}
@@ -85,8 +92,9 @@ export function TopBar({
         <option value="cost-first">cost-first</option>
       </select>
 
-      <label>Time limit</label>
+      <label htmlFor="topbar-limit">Time limit</label>
       <select
+        id="topbar-limit"
         value={limitSeconds}
         onChange={(e) => onLimitChange(Number(e.target.value))}
         disabled={solving}
@@ -104,18 +112,21 @@ export function TopBar({
           onClick={onSolve}
           disabled={!canSolve}
         >
-          ▶ Solve
+          <Play size={14} aria-hidden="true" />
+          Solve
         </button>
       ) : (
         <button className="btn btn-danger" onClick={onStop}>
-          ⏹ Stop
+          <Square size={13} aria-hidden="true" />
+          Stop
         </button>
       )}
 
       <div className="sep" />
 
-      <label>Currency</label>
+      <label htmlFor="topbar-currency">Currency</label>
       <select
+        id="topbar-currency"
         value={currency}
         onChange={(e) => onCurrencyChange(e.target.value as Currency)}
       >
@@ -124,8 +135,9 @@ export function TopBar({
         <option value="GBP">GBP £</option>
       </select>
 
-      <label>Role</label>
+      <label htmlFor="topbar-role">Role</label>
       <select
+        id="topbar-role"
         value={role}
         onChange={(e) => onRoleChange(e.target.value as Role)}
       >

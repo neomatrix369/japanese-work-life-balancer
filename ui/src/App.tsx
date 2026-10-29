@@ -29,6 +29,8 @@ import { ReplayBar } from './components/ReplayBar';
 import { TourOverlay } from './components/TourOverlay';
 import { useTour, type TourController } from './tour/useTour';
 import { weekDates } from './tour/narrate';
+import { DashboardSkeleton } from './components/DashboardSkeleton';
+import { AlertTriangle, Pin } from 'lucide-react';
 
 const POLL_INTERVAL_MS = 2000;
 
@@ -195,7 +197,7 @@ export function App() {
   const handleSaveRun = useCallback(() => {
     if (!scheduleResponse) return;
     setSavedRun({
-      label: `${scheduleResponse.preset ?? preset} — ${scheduleResponse.schedule?.name ?? selectedScenario}`,
+      label: `${scheduleResponse.preset ?? preset} · ${scheduleResponse.schedule?.name ?? selectedScenario}`,
       response: scheduleResponse,
     });
   }, [scheduleResponse, preset, selectedScenario]);
@@ -234,7 +236,7 @@ export function App() {
       setLiveStatus('NOT_SOLVING');
     },
     keep: (resp, spec) =>
-      setSavedRun({ label: `${spec.preset} — ${resp.schedule?.name ?? spec.scenario}`, response: resp }),
+      setSavedRun({ label: `${spec.preset} · ${resp.schedule?.name ?? spec.scenario}`, response: resp }),
   };
   const tour = useTour(tourController, { current: scheduleResponse, currency });
   const tourStep = tour.active ? tour.step : null;
@@ -275,8 +277,8 @@ export function App() {
       {/* Model-down banner */}
       {modelDown && (
         <div className="banner">
-          <span className="banner-icon">⚠️</span>
-          <strong>Model not running —</strong> the Quarkus solver is not reachable on{' '}
+          <span className="banner-icon"><AlertTriangle size={18} aria-hidden="true" /></span>
+          <strong>Model not running.</strong> The Quarkus solver is not reachable on{' '}
           <code>localhost:8083</code>. Run <code>make model</code> to start it. UI is shown in
           read-only mode.
         </div>
@@ -348,7 +350,8 @@ export function App() {
             onClick={handleSaveRun}
             style={{ fontSize: 12 }}
           >
-            📌 Keep this run for comparison
+            <Pin size={13} aria-hidden="true" />
+            Keep this run for comparison
           </button>
         )}
         {(liveScore || scheduleResponse?.score) && (
@@ -376,6 +379,9 @@ export function App() {
 
       {/* Main panels */}
       <div className="main-content">
+        {/* Placeholder while the first result of a solve is on its way */}
+        {solving && !displayedResult && <DashboardSkeleton />}
+
         {/* KPI cards — show when there's any response.
             data-tour anchors kpis-health / kpis-business live inside KpiCards. */}
         {displayedResult?.kpis && (

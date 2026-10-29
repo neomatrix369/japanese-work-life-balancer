@@ -17,7 +17,7 @@ export function LongevityView({ longevity, role, perEmployeeList }: LongevityVie
   return (
     <div className="card" data-tour="longevity">
       <div className="card-title">
-        Longevity View
+        Longevity view
         <span
           style={{
             marginLeft: 8,
@@ -33,7 +33,7 @@ export function LongevityView({ longevity, role, perEmployeeList }: LongevityVie
         </span>
         {!canSeePerEmployee && (
           <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--fg-muted)' }}>
-            (Managers see company-level only — switch role to HR/Executive for per-employee detail)
+            Managers see company-level figures only. Switch role to HR or Executive for per-employee detail.
           </span>
         )}
       </div>
@@ -58,7 +58,7 @@ export function LongevityView({ longevity, role, perEmployeeList }: LongevityVie
       {longevity.retention && (
         <>
           <div style={{ fontWeight: 600, fontSize: 12, color: 'var(--fg-muted)', marginBottom: 8 }}>
-            Retention rates (MOCK — company reported figures)
+            Retention rates (MOCK: company-reported figures)
           </div>
           <div className="retention-grid">
             <div className="retention-card">

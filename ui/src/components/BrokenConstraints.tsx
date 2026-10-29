@@ -1,4 +1,5 @@
 import React from 'react';
+import { Check, CheckCircle2, X } from 'lucide-react';
 import type { BrokenConstraint } from '../api';
 
 interface BrokenConstraintsProps {
@@ -23,7 +24,7 @@ export function BrokenConstraints({ brokenConstraints, score }: BrokenConstraint
   return (
     <div className="card">
       <div className="card-title" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
-        Broken Constraints
+        Broken constraints
         <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 400, fontSize: 12, color: 'var(--fg-muted)' }}>
           score: {score || '–'}
         </span>
@@ -38,7 +39,7 @@ export function BrokenConstraints({ brokenConstraints, score }: BrokenConstraint
               fontWeight: 700,
             }}
           >
-            0 hard ✓
+            0 hard <Check size={12} aria-hidden="true" style={{ verticalAlign: -1 }} />
           </span>
         ) : (
           <span
@@ -51,13 +52,13 @@ export function BrokenConstraints({ brokenConstraints, score }: BrokenConstraint
               fontWeight: 700,
             }}
           >
-            {hardCount} hard ✗
+            {hardCount} hard <X size={12} aria-hidden="true" style={{ verticalAlign: -1 }} />
           </span>
         )}
       </div>
 
       {brokenConstraints.length === 0 ? (
-        <div className="all-clear">✓ No constraints broken — plan is fully feasible</div>
+        <div className="all-clear"><CheckCircle2 size={16} aria-hidden="true" />No constraints broken: the plan is fully feasible.</div>
       ) : (
         <div>
           {[...hard, ...medium, ...soft].map((c, i) => (
