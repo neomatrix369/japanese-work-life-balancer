@@ -11,7 +11,8 @@ export interface SavedRun {
 interface CompareRunsProps {
   savedRun: SavedRun | null;
   currentResponse: ScheduleResponse | null;
-  onSave: () => void;
+  /** onSave is handled externally (status-line button); kept here for API compat. */
+  onSave?: () => void;
   onClear: () => void;
   currency: Currency;
 }
@@ -96,36 +97,20 @@ function buildRows(
 export function CompareRuns({
   savedRun,
   currentResponse,
-  onSave,
   onClear,
   currency,
 }: CompareRunsProps) {
-  const canSave = currentResponse !== null;
   const canCompare = savedRun !== null && currentResponse !== null;
 
   return (
-    <div className="card" data-tour="compare">
-      <div
-        className="card-title"
-        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-      >
-        <span>Compare Runs</span>
-        <div style={{ display: 'flex', gap: 8 }}>
-          {savedRun && (
-            <button className="btn" onClick={onClear} style={{ fontSize: 12 }}>
-              × Clear saved
-            </button>
-          )}
-          <button
-            className="btn btn-primary"
-            onClick={onSave}
-            disabled={!canSave}
-            style={{ fontSize: 12 }}
-          >
-            📌 Keep this run for comparison
+    <div>
+      {savedRun && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
+          <button className="btn" onClick={onClear} style={{ fontSize: 12 }}>
+            × Clear saved
           </button>
         </div>
-      </div>
+      )}
 
       {!canCompare && (
         <div className="empty-state">
