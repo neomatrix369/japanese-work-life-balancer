@@ -127,6 +127,14 @@ Keyboard: **Space** pause/resume, **← →** back/next, **Esc** exit.
 16. Every panel is **collapsible**: click its header to fold it away; the page remembers your choice.
     The guided tour opens a folded panel when it needs to point at it.
 
+### Look and feel
+
+The design language lives in [`design-system/MASTER.md`](design-system/MASTER.md): colour tokens named by meaning
+(`--ink`, `--surface`, `--accent`, `--signal-good/warn/bad`), a type and spacing scale, and motion timings, with every
+text colour pair at 4.5:1 contrast or better in light and dark. [`ui/src/theme.css`](ui/src/theme.css) is loaded last
+and only restyles existing classes, so visual changes never touch component markup. Icons are SVG
+([Lucide](https://lucide.dev)); animations switch off when the system asks for reduced motion.
+
 ### Voice narration (ElevenLabs)
 
 The **▶ Play demo** tour reads each step aloud and waits for the line to finish before it moves on.

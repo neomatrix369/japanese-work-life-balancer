@@ -90,4 +90,6 @@ japanese-work-life-balancer/
   browser smoke-check at 1280 px and 390 px (especially the tour overlay and the replay bar).
 - **Tour fixtures are in `ui/src/tour/fixtures/`**: regenerate with `node ui/scripts/record-tour-fixtures.mjs`
   (model must be running). Commit the updated fixtures alongside the UI change.
-- **Coming next:** ElevenLabs voice narration for the tour; UI design-polish pass.
+- **Visual changes go in `ui/src/theme.css`** (loaded last, overrides only) using the tokens in
+  `design-system/MASTER.md`; no hex values in components. Markup changes belong to the component.
+- **Automated browser checks must stub `speechSynthesis`**: headless Chrome on macOS speaks through the real speakers.
