@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Preset, SolverStatus } from '../api';
 import type { Currency, Role } from '../types';
+import { ThemeControl } from './ThemeControl';
 
 interface TopBarProps {
   scenarios: string[];
@@ -47,6 +48,7 @@ export function TopBar({
   return (
     <div className="topbar" data-tour="controls">
       <span className="topbar-title">🌸 Work-Life Balancer</span>
+      <ThemeControl />
       {onPlayTour && (
         <button
           className="btn btn-tour"

@@ -53,8 +53,6 @@ export interface Tour {
 }
 
 const PLAY_BUTTON_SELECTOR = '[data-tour="play"]';
-/** Integration contract: the compare panel may be a collapsible <details id="compare-panel">. */
-const COMPARE_PANEL_ID = 'compare-panel';
 
 export function useTour(controller: TourController, view: TourView, steps: TourStep[] = TOUR_STEPS): Tour {
   const ctrlRef = useRef(controller);
@@ -132,22 +130,42 @@ export function useTour(controller: TourController, view: TourView, steps: TourS
     if (s.keep && done[s.keep]) ctrl.keep(done[s.keep]!, RUNS[s.keep]);
   }, [active, index, steps]);
 
-  // ── Collapsible compare panel: open it when targeted, restore on exit ─────
-  const detailsPrevOpen = useRef<boolean | null>(null);
+  // ── Collapsible panels: open any closed <details> that is or contains the tour target ──
+  // Tracks { element → previous open state } for all panels opened by the tour.
+  const panelStateRef = useRef<Map<HTMLDetailsElement, boolean>>(new Map());
+
   useEffect(() => {
-    if (!active || step.target !== 'compare') return;
-    const el = document.getElementById(COMPARE_PANEL_ID);
-    if (el instanceof HTMLDetailsElement) {
-      if (detailsPrevOpen.current === null) detailsPrevOpen.current = el.open;
-      el.open = true;
+    if (!active || !step.target) return;
+    const targetEl = document.querySelector<HTMLElement>(`[data-tour="${step.target}"]`);
+    if (!targetEl) return;
+
+    const openIfClosed = (el: HTMLDetailsElement) => {
+      if (!el.open) {
+        if (!panelStateRef.current.has(el)) panelStateRef.current.set(el, false);
+        el.open = true;
+      }
+    };
+
+    // Open the target itself if it is a <details>
+    if (targetEl instanceof HTMLDetailsElement) openIfClosed(targetEl);
+
+    // Open any closed <details> ancestors of the target
+    let anc: Element | null = targetEl.parentElement;
+    while (anc) {
+      if (anc instanceof HTMLDetailsElement) openIfClosed(anc);
+      anc = anc.parentElement;
     }
-  }, [active, step.target]);
-  const restoreDetails = useCallback(() => {
-    const el = document.getElementById(COMPARE_PANEL_ID);
-    if (el instanceof HTMLDetailsElement && detailsPrevOpen.current !== null) {
-      el.open = detailsPrevOpen.current;
+
+    // For non-details targets (e.g. data-tour="kpis"), also open any closed
+    // descendant <details> panels so the KPI content is visible.
+    if (!(targetEl instanceof HTMLDetailsElement)) {
+      targetEl.querySelectorAll<HTMLDetailsElement>('details').forEach(openIfClosed);
     }
-    detailsPrevOpen.current = null;
+  }, [active, step.target, index]);
+
+  const restoreAllPanels = useCallback(() => {
+    panelStateRef.current.forEach((wasOpen, el) => { el.open = wasOpen; });
+    panelStateRef.current.clear();
   }, []);
 
   // ── Navigation ────────────────────────────────────────────────────────────
@@ -180,13 +198,13 @@ export function useTour(controller: TourController, view: TourView, steps: TourS
 
   const exit = useCallback(() => {
     leaveStep();
-    restoreDetails();
+    restoreAllPanels();
     tokenRef.current++;
     setActive(false);
     setRunning(false);
     setPaused(false);
     setTimeout(() => document.querySelector<HTMLElement>(PLAY_BUTTON_SELECTOR)?.focus(), 0);
-  }, [leaveStep, restoreDetails]);
+  }, [leaveStep, restoreAllPanels]);
 
   const togglePause = useCallback(() => setPaused((p) => !p), []);
 

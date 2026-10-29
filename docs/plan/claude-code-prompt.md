@@ -1,5 +1,13 @@
 # Build Spec — Japanese Work-Life Balancer (Claude Code prompt)
 
+> **Implementation status (as of 2026-10-29, commit fac062c):** Build is complete and demo-ready.
+> Key deviations from this spec: model runs on **:8083** (not :8080); GET `/` → 303 redirect to UI; the
+> `Consecutive days risk` constraint adds a per-person flat charge (`AT_RISK_PERSON_PENALTY = 2400`) in addition to
+> the per-day formula; scenarios were retuned for demonstrability (see README → Scenarios and "What is mocked").
+> Extra UI features beyond the spec: solver replay bar, guided "▶ Play demo" tour (19 steps), theme toggle,
+> plain-language KPI ⓘ tooltips, Compare runs as a collapsed `<details>` panel.
+> → See [README.md](../../README.md#deviations) for full details.
+
 You are building a hackathon entry for **Hack for Humanity London (2026-10-29)** in the current directory:
 `japanese-work-life-balancer/` (it sits inside the `ai-ml-dl-stuff` git repository — do **not** run `git init`).
 

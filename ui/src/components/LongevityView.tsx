@@ -1,6 +1,7 @@
 import React from 'react';
 import type { LongevityData, PerEmployeeKpi } from '../api';
 import type { Role } from '../types';
+import { CollapsiblePanel } from './CollapsiblePanel';
 
 interface LongevityViewProps {
   longevity: LongevityData;
@@ -14,29 +15,32 @@ interface LongevityViewProps {
 export function LongevityView({ longevity, role, perEmployeeList }: LongevityViewProps) {
   const canSeePerEmployee = role === 'HR' || role === 'Executive';
 
-  return (
-    <div className="card" data-tour="longevity">
-      <div className="card-title">
-        Longevity View
-        <span
-          style={{
-            marginLeft: 8,
-            fontSize: 11,
-            fontWeight: 400,
-            background: 'var(--blue-bg)',
-            color: 'var(--blue)',
-            borderRadius: 10,
-            padding: '1px 8px',
-          }}
-        >
-          {role}
+  const title = (
+    <>
+      Longevity View
+      <span
+        style={{
+          marginLeft: 8,
+          fontSize: 11,
+          fontWeight: 400,
+          background: 'var(--blue-bg)',
+          color: 'var(--blue)',
+          borderRadius: 10,
+          padding: '1px 8px',
+        }}
+      >
+        {role}
+      </span>
+      {!canSeePerEmployee && (
+        <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--fg-muted)', textTransform: 'none', letterSpacing: 0, fontWeight: 400 }}>
+          (Managers see company-level only)
         </span>
-        {!canSeePerEmployee && (
-          <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--fg-muted)' }}>
-            (Managers see company-level only — switch role to HR/Executive for per-employee detail)
-          </span>
-        )}
-      </div>
+      )}
+    </>
+  );
+
+  return (
+    <CollapsiblePanel id="longevity" title={title} dataTour="longevity" defaultOpen={true}>
 
       {/* Company-level stats — visible to all */}
       <div className="retention-grid">
@@ -167,6 +171,6 @@ export function LongevityView({ longevity, role, perEmployeeList }: LongevityVie
           </div>
         </>
       )}
-    </div>
+    </CollapsiblePanel>
   );
 }

@@ -90,6 +90,13 @@ make clean   # remove build outputs and data-gen/out/
 
 ## Using the app
 
+### Guided tour
+
+Click **▶ Play demo** (top bar, next to the title) to run a hands-free 19-step story through the app.
+The tour solves `burnout` (cost-first then health-first) and `overloaded` live with a 10-second time limit;
+if the model is not reachable it falls back to recorded results automatically.
+Keyboard: **Space** pause/resume, **← →** back/next, **Esc** exit.
+
 ### Dashboard walkthrough
 
 1. **Pick a scenario** from the dropdown (top left) — e.g. `burnout`.
@@ -106,13 +113,19 @@ make clean   # remove build outputs and data-gen/out/
 7. Check the **hours bar chart** against each employee's daily/weekly limits.
 8. Read the **unassigned tasks table** to understand why tasks weren't covered (skill gap, capacity, holiday).
 9. Inspect **broken constraints** — a healthy plan shows `0 hard`.
-10. Click **Keep this run for comparison**, then re-solve with a different preset.
-    The **compare panel** shows deltas: labor cost, profit, at-risk count, healthy share, idle hours, unassigned.
+10. Click **Keep this run for comparison** (in the status line), then re-solve with a different preset.
+    Open **Compare runs** at the bottom of the page (collapsed by default) to see deltas: labor cost,
+    profit, at-risk count, healthy share, idle hours, unassigned.
 11. Use the **Solver replay bar** (appears below the score line after solving) to replay how the solver
     improved the plan step by step. Hit **▶ Play** or scrub the slider. Speed buttons (1×, 2×, 4×)
     control playback pace; **Live** jumps back to the final result. Each step shows elapsed time and score.
-12. Switch **currency** (JPY / USD / GBP) via the top-bar selector (indicative fixed rates).
-13. Switch **role** (Manager / HR / Executive) to reveal the longevity view (HR and Executive only).
+12. Switch **theme** (Light / Dark / System) via the compact ☀/☾/🖥 toggle next to the title. Stored in localStorage.
+13. Switch **currency** (JPY / USD / GBP) via the top-bar selector (fixed indicative rates: 1 USD = 150 JPY, 1 GBP = 195 JPY).
+14. Switch **role** (Manager / HR / Executive). The **Longevity** panel sits under the KPI cards:
+    Manager sees company-level numbers; HR and Executive also see per-employee tenure and absences.
+15. Click **ⓘ** on any KPI card for a plain-language explanation of what it measures.
+16. Every panel is **collapsible**: click its header to fold it away; the page remembers your choice.
+    The guided tour opens a folded panel when it needs to point at it.
 
 ### Use it from Claude
 
@@ -158,9 +171,10 @@ Base URL: `http://localhost:8083`
 
 | Method | Path | Purpose |
 |---|---|---|
+| GET | `/` | 303 redirect to the UI (`http://localhost:5173`; override with `app.ui-url`) |
 | GET | `/demo-data` | List available scenario names |
 | GET | `/demo-data/{name}` | Return scenario JSON (unsolved) |
-| POST | `/schedules?preset=health-first&limitSeconds=30` | Submit a solve job; returns job id |
+| POST | `/schedules?preset=health-first&limitSeconds=30` | Submit a solve job (body = WorkSchedule JSON); returns job id. Missing body → 400 with a hint. |
 | POST | `/schedules/scenario/{name}?preset=…&limitSeconds=…` | Load scenario from disk and solve |
 | GET | `/schedules` | List job ids |
 | GET | `/schedules/{jobId}` | Full result: schedule, KPIs, broken constraints |
@@ -222,7 +236,7 @@ behaviour, which makes the health–cost trade-off visible side by side in the c
 
 | File | Week starts | Public holidays | Employees | Tasks (approx.) | Load | Story |
 |---|---|---|---|---|---|---|
-| `tiny.json` | 2026-11-09 | none | 8 | ~55 | ~60% | Debugging (the model's unit tests use their own hand-written copy) |
+| `tiny.json` | 2026-11-09 | none | 8 | 56 | ~60% | Debugging (the model's unit tests use their own hand-written copy) |
 | `normal.json` | 2026-11-09 | none | 50 | ~250 | ~50% | A regular week — all tasks should be assigned |
 | `overloaded.json` | 2026-11-09 | none | 50 | ~650 | ~125% | More work than capacity → unassigned tasks with reasons; 0 hard |
 | `holiday.json` | 2026-11-02 | 2026-11-03 (Culture Day) | 50 | ~430 | ~80% | ~20 tasks fall on the public holiday; ~10% of staff have approved holidays |

@@ -35,6 +35,12 @@ class WorkScheduleResourceTest {
     }
 
     @Test
+    void rejectsSolveWithoutBody() {
+        given().contentType("application/json").when().post("/schedules?preset=health-first")
+                .then().statusCode(400);
+    }
+
+    @Test
     void solvesScenarioAndReturnsKpisAndBrokenConstraints() {
         String jobId = given().when().post("/schedules/scenario/tiny?preset=cost-first&limitSeconds=5")
                 .then().statusCode(200).extract().asString();

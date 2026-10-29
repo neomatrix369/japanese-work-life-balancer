@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { CompanyKpis } from '../api';
 import type { Currency } from '../types';
 import { formatMoney } from '../fx';
+import { KPI_HELP } from '../kpiHelp';
+import { CollapsiblePanel } from './CollapsiblePanel';
 
 interface KpiCardsProps {
   kpis: CompanyKpis;
@@ -41,12 +43,35 @@ function KpiCard({
   variant?: 'good' | 'warn' | 'bad';
   deltaInfo?: { text: string; cls: 'good' | 'bad' | 'neutral' };
 }) {
+  const [infoOpen, setInfoOpen] = useState(false);
+  const helpText = KPI_HELP[label];
+  const infoId = `kpi-info-${label.replace(/\s+/g, '-').toLowerCase()}`;
+
   return (
     <div className="kpi-card">
-      <div className="kpi-label">{label}</div>
+      <div className="kpi-label">
+        <span>{label}</span>
+        {helpText && (
+          <button
+            className="kpi-info-btn"
+            aria-label={`What is ${label}?`}
+            aria-expanded={infoOpen}
+            aria-controls={infoId}
+            onClick={() => setInfoOpen((v) => !v)}
+            onKeyDown={(e) => e.key === 'Escape' && setInfoOpen(false)}
+          >
+            ⓘ
+          </button>
+        )}
+      </div>
       <div className={`kpi-value${variant ? ` ${variant}` : ''}`}>{value}</div>
       {deltaInfo && (
         <div className={`kpi-delta kpi-delta-${deltaInfo.cls}`}>{deltaInfo.text}</div>
+      )}
+      {helpText && infoOpen && (
+        <div id={infoId} className="kpi-info-text" role="note">
+          {helpText}
+        </div>
       )}
       {sub && <div className="kpi-sub">{sub}</div>}
     </div>
@@ -78,40 +103,52 @@ export function KpiCards({ kpis, currency, baselineKpis }: KpiCardsProps) {
   return (
     <div className="kpi-groups" data-tour="kpis">
       {/* Health group */}
-      <div className="kpi-group" data-tour="kpi-health">
-        <div className="kpi-group-label health">Health</div>
+      <CollapsiblePanel
+        id="kpi-health"
+        title={<span style={{ color: 'var(--green)' }}>Health</span>}
+        dataTour="kpi-health"
+        defaultOpen={true}
+        className="kpi-group"
+        style={{ marginBottom: 0 }}
+      >
         <div className="kpi-grid">
           <KpiCard
             label="Healthy share"
             value={`${healthyPct}%`}
-            sub="≤2 consecutive days"
+            sub="never 3+ days in a row"
             variant={healthyPct >= 80 ? 'good' : healthyPct >= 60 ? 'warn' : 'bad'}
             deltaInfo={dHealthy}
           />
           <KpiCard
             label="At-risk employees"
             value={String(atRisk)}
-            sub="3+ consecutive days"
+            sub="work 3+ days in a row"
             variant={atRisk === 0 ? 'good' : atRisk <= 5 ? 'warn' : 'bad'}
             deltaInfo={dAtRisk}
           />
           <KpiCard
             label="Avg consecutive days"
             value={avgCons}
-            sub="this week"
+            sub="longest run per person"
             variant={Number(avgCons) < 2 ? 'good' : Number(avgCons) < 3 ? 'warn' : 'bad'}
           />
           <KpiCard
             label="Idle hours total"
             value={`${(kpis.idleHoursTotal ?? 0).toFixed(0)} h`}
-            sub="across all employees"
+            sub="paid time with no task"
           />
         </div>
-      </div>
+      </CollapsiblePanel>
 
       {/* Business group */}
-      <div className="kpi-group" data-tour="kpi-business">
-        <div className="kpi-group-label business">Business</div>
+      <CollapsiblePanel
+        id="kpi-business"
+        title={<span style={{ color: 'var(--primary)' }}>Business</span>}
+        dataTour="kpi-business"
+        defaultOpen={true}
+        className="kpi-group"
+        style={{ marginBottom: 0 }}
+      >
         <div className="kpi-grid">
           <KpiCard
             label="Labor cost"
@@ -138,7 +175,7 @@ export function KpiCards({ kpis, currency, baselineKpis }: KpiCardsProps) {
             deltaInfo={dUnassigned}
           />
         </div>
-      </div>
+      </CollapsiblePanel>
     </div>
   );
 }

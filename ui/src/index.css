@@ -1,5 +1,6 @@
-/* ── Design tokens ── */
+/* ── Design tokens — Light (default) ── */
 :root {
+  /* Base palette */
   --bg: #f8fafc;
   --bg-surface: #ffffff;
   --bg-muted: #f1f5f9;
@@ -17,34 +18,41 @@
   --blue: #2563eb;
   --blue-bg: #dbeafe;
   --neutral-bg: #f1f5f9;
+
+  /* Semantic aliases (referenced by new and future code) */
+  --surface:       var(--bg-surface);
+  --surface-2:     var(--bg-muted);
+  --text:          var(--fg);
+  --text-muted:    var(--fg-muted);
+  --accent:        var(--primary);
+  --accent-fg:     var(--primary-fg);
+  --good:          var(--green);
+  --good-bg:       var(--green-bg);
+  --warn:          var(--amber);
+  --warn-bg:       var(--amber-bg);
+  --bad:           var(--red);
+  --bad-bg:        var(--red-bg);
+  --holiday-blue:  var(--blue);
+  --holiday-blue-bg: var(--blue-bg);
+
+  /* Additional tokens not previously covered */
+  --focus-ring:    var(--primary);
+  --overlay:       rgba(0, 0, 0, 0.35);
+
+  /* Chart colour palette (used via getComputedStyle or var() in SVG styles) */
+  --chart-1: var(--primary);   /* normal bars */
+  --chart-2: var(--amber);     /* warning / at-threshold */
+  --chart-3: var(--red);       /* at-risk */
+  --chart-4: var(--green);     /* good / positive */
+
+  /* Misc */
   --card-shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
   --radius: 8px;
   --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'SF Mono', 'Fira Code', monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #0f172a;
-    --bg-surface: #1e293b;
-    --bg-muted: #0f172a;
-    --fg: #f1f5f9;
-    --fg-muted: #94a3b8;
-    --border: #334155;
-    --primary: #3b82f6;
-    --green: #4ade80;
-    --green-bg: #14532d;
-    --amber: #fbbf24;
-    --amber-bg: #78350f;
-    --red: #f87171;
-    --red-bg: #7f1d1d;
-    --blue: #60a5fa;
-    --blue-bg: #1e3a5f;
-    --neutral-bg: #1e293b;
-    --card-shadow: 0 1px 4px rgba(0,0,0,.4);
-  }
-}
-
+/* ── Dark theme — explicit [data-theme="dark"] ── */
 :root[data-theme="dark"] {
   --bg: #0f172a;
   --bg-surface: #1e293b;
@@ -53,6 +61,7 @@
   --fg-muted: #94a3b8;
   --border: #334155;
   --primary: #3b82f6;
+  --primary-fg: #ffffff;
   --green: #4ade80;
   --green-bg: #14532d;
   --amber: #fbbf24;
@@ -62,7 +71,33 @@
   --blue: #60a5fa;
   --blue-bg: #1e3a5f;
   --neutral-bg: #1e293b;
+  --overlay: rgba(0, 0, 0, 0.55);
   --card-shadow: 0 1px 4px rgba(0,0,0,.4);
+}
+
+/* ── System theme — follows OS preference when data-theme="system" ── */
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="system"] {
+    --bg: #0f172a;
+    --bg-surface: #1e293b;
+    --bg-muted: #0f172a;
+    --fg: #f1f5f9;
+    --fg-muted: #94a3b8;
+    --border: #334155;
+    --primary: #3b82f6;
+    --primary-fg: #ffffff;
+    --green: #4ade80;
+    --green-bg: #14532d;
+    --amber: #fbbf24;
+    --amber-bg: #78350f;
+    --red: #f87171;
+    --red-bg: #7f1d1d;
+    --blue: #60a5fa;
+    --blue-bg: #1e3a5f;
+    --neutral-bg: #1e293b;
+    --overlay: rgba(0, 0, 0, 0.55);
+    --card-shadow: 0 1px 4px rgba(0,0,0,.4);
+  }
 }
 
 /* ── Reset ── */
@@ -80,7 +115,7 @@ body {
 
 /* ── Layout ── */
 .app { display: flex; flex-direction: column; min-height: 100vh; }
-.main-content { padding: 16px; max-width: 1600px; margin: 0 auto; width: 100%; }
+.main-content { padding: 16px; max-width: 1600px; margin: 0 auto; width: 100%; overflow-x: hidden; }
 
 /* ── Card ── */
 .card {
@@ -134,6 +169,27 @@ body {
 .topbar input:focus { outline: 2px solid var(--primary); outline-offset: 1px; }
 .topbar label { font-size: 12px; color: var(--fg-muted); white-space: nowrap; }
 .topbar .sep { width: 1px; height: 24px; background: var(--border); margin: 0 4px; }
+.theme-toggle {
+  display: inline-flex;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.theme-toggle-btn {
+  width: 26px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  background: var(--bg);
+  color: var(--fg-muted);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+}
+.theme-toggle-btn + .theme-toggle-btn { border-left: 1px solid var(--border); }
+.theme-toggle-btn[aria-pressed="true"] { background: var(--primary); color: var(--primary-fg); }
+.theme-toggle-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
 .btn {
   height: 32px;
   padding: 0 14px;
@@ -234,6 +290,7 @@ body {
   color: var(--fg);
   font-size: 13px;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
 }
@@ -331,7 +388,7 @@ body {
 /* ── Side Panel ── */
 .side-panel-overlay {
   position: fixed; inset: 0;
-  background: rgba(0,0,0,.35);
+  background: var(--overlay);
   z-index: 200;
   display: flex;
   justify-content: flex-end;
@@ -417,6 +474,86 @@ body {
 .retention-value { font-size: 24px; font-weight: 700; }
 .retention-label { font-size: 11px; color: var(--fg-muted); }
 
+/* ── Collapsible panel (details/summary) ── */
+.panel-collapsible {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--card-shadow);
+  margin-bottom: 16px;
+}
+.panel-collapsible-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fg-muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  user-select: none;
+}
+.panel-collapsible-summary::-webkit-details-marker { display: none; }
+.panel-collapsible-summary:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+  border-radius: var(--radius);
+}
+.panel-chevron {
+  margin-left: auto;
+  font-size: 16px;
+  line-height: 1;
+  transition: transform .2s ease;
+  color: var(--fg-muted);
+}
+.panel-collapsible[open] > .panel-collapsible-summary .panel-chevron {
+  transform: rotate(90deg);
+}
+.panel-collapsible-content { padding: 0 16px 16px; }
+.compare-kept-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--blue-bg);
+  color: var(--blue);
+}
+
+/* ── KPI info button ── */
+.kpi-label { display: flex; align-items: center; gap: 4px; }
+.kpi-info-btn {
+  background: none;
+  border: none;
+  padding: 0 2px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--fg-muted);
+  line-height: 1;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+}
+.kpi-info-btn:hover { color: var(--primary); }
+.kpi-info-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+.kpi-info-text {
+  margin-top: 6px;
+  padding: 6px 8px;
+  background: var(--bg-muted);
+  border-left: 3px solid var(--primary);
+  border-radius: 0 4px 4px 0;
+  font-size: 11px;
+  color: var(--fg-muted);
+  line-height: 1.5;
+}
+
 /* ── Utility ── */
 .row { display: flex; align-items: center; gap: 8px; }
 .gap-16 { gap: 16px; }
@@ -492,11 +629,27 @@ body {
 .tour-sheet {
   left: 0; right: 0; bottom: 0;
   width: auto;
-  max-height: 50vh;
-  overflow-y: auto;
+  /* height: max-content is a definite value (adapts to short content), capped at max-height.
+     A definite height lets flex-grow/shrink distribute space correctly so the controls
+     are always allocated their natural height at the bottom of the sheet. */
+  height: max-content;
+  max-height: min(80vh, 640px);
+  /* overflow: hidden clips any accidental overflow after the flex calculation */
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   border-radius: 14px 14px 0 0;
   padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
 }
+/* scrollable text region: grows to fill remaining space, shrinks when capped */
+.tour-sheet .tour-sheet-body {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+/* controls and hint row are always pinned — never shrink below natural height */
+.tour-sheet .tour-controls,
+.tour-sheet .tour-keys { flex-shrink: 0; }
 .tour-head { display: flex; align-items: center; gap: 8px; }
 .tour-step {
   font-family: var(--font-mono);
@@ -514,7 +667,7 @@ body {
   padding: 2px 6px; border-radius: 6px;
 }
 .tour-x:hover { background: var(--bg-muted, #f1f5f9); }
-.tour-text { margin: 8px 0 6px; font-size: 14px; line-height: 1.55; }
+.tour-text { margin: 8px 0 6px; font-size: 14px; line-height: 1.55; pointer-events: none; }
 .tour-running { color: var(--primary, #2563eb); font-weight: 600; }
 .tour-recorded { font-size: 11px; color: var(--fg-muted, #64748b); font-style: italic; margin-bottom: 6px; }
 .tour-progress { height: 3px; background: var(--bg-muted, #f1f5f9); border-radius: 2px; overflow: hidden; margin: 6px 0 10px; }
