@@ -1,5 +1,6 @@
-/* ── Design tokens ── */
+/* ── Design tokens — Light (default) ── */
 :root {
+  /* Base palette */
   --bg: #f8fafc;
   --bg-surface: #ffffff;
   --bg-muted: #f1f5f9;
@@ -17,34 +18,41 @@
   --blue: #2563eb;
   --blue-bg: #dbeafe;
   --neutral-bg: #f1f5f9;
+
+  /* Semantic aliases (referenced by new and future code) */
+  --surface:       var(--bg-surface);
+  --surface-2:     var(--bg-muted);
+  --text:          var(--fg);
+  --text-muted:    var(--fg-muted);
+  --accent:        var(--primary);
+  --accent-fg:     var(--primary-fg);
+  --good:          var(--green);
+  --good-bg:       var(--green-bg);
+  --warn:          var(--amber);
+  --warn-bg:       var(--amber-bg);
+  --bad:           var(--red);
+  --bad-bg:        var(--red-bg);
+  --holiday-blue:  var(--blue);
+  --holiday-blue-bg: var(--blue-bg);
+
+  /* Additional tokens not previously covered */
+  --focus-ring:    var(--primary);
+  --overlay:       rgba(0, 0, 0, 0.35);
+
+  /* Chart colour palette (used via getComputedStyle or var() in SVG styles) */
+  --chart-1: var(--primary);   /* normal bars */
+  --chart-2: var(--amber);     /* warning / at-threshold */
+  --chart-3: var(--red);       /* at-risk */
+  --chart-4: var(--green);     /* good / positive */
+
+  /* Misc */
   --card-shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
   --radius: 8px;
   --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'SF Mono', 'Fira Code', monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #0f172a;
-    --bg-surface: #1e293b;
-    --bg-muted: #0f172a;
-    --fg: #f1f5f9;
-    --fg-muted: #94a3b8;
-    --border: #334155;
-    --primary: #3b82f6;
-    --green: #4ade80;
-    --green-bg: #14532d;
-    --amber: #fbbf24;
-    --amber-bg: #78350f;
-    --red: #f87171;
-    --red-bg: #7f1d1d;
-    --blue: #60a5fa;
-    --blue-bg: #1e3a5f;
-    --neutral-bg: #1e293b;
-    --card-shadow: 0 1px 4px rgba(0,0,0,.4);
-  }
-}
-
+/* ── Dark theme — explicit [data-theme="dark"] ── */
 :root[data-theme="dark"] {
   --bg: #0f172a;
   --bg-surface: #1e293b;
@@ -53,6 +61,7 @@
   --fg-muted: #94a3b8;
   --border: #334155;
   --primary: #3b82f6;
+  --primary-fg: #ffffff;
   --green: #4ade80;
   --green-bg: #14532d;
   --amber: #fbbf24;
@@ -62,7 +71,33 @@
   --blue: #60a5fa;
   --blue-bg: #1e3a5f;
   --neutral-bg: #1e293b;
+  --overlay: rgba(0, 0, 0, 0.55);
   --card-shadow: 0 1px 4px rgba(0,0,0,.4);
+}
+
+/* ── System theme — follows OS preference when data-theme="system" ── */
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="system"] {
+    --bg: #0f172a;
+    --bg-surface: #1e293b;
+    --bg-muted: #0f172a;
+    --fg: #f1f5f9;
+    --fg-muted: #94a3b8;
+    --border: #334155;
+    --primary: #3b82f6;
+    --primary-fg: #ffffff;
+    --green: #4ade80;
+    --green-bg: #14532d;
+    --amber: #fbbf24;
+    --amber-bg: #78350f;
+    --red: #f87171;
+    --red-bg: #7f1d1d;
+    --blue: #60a5fa;
+    --blue-bg: #1e3a5f;
+    --neutral-bg: #1e293b;
+    --overlay: rgba(0, 0, 0, 0.55);
+    --card-shadow: 0 1px 4px rgba(0,0,0,.4);
+  }
 }
 
 /* ── Reset ── */
@@ -331,7 +366,7 @@ body {
 /* ── Side Panel ── */
 .side-panel-overlay {
   position: fixed; inset: 0;
-  background: rgba(0,0,0,.35);
+  background: var(--overlay);
   z-index: 200;
   display: flex;
   justify-content: flex-end;
