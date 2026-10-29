@@ -121,7 +121,7 @@ model:
 # ── ui ────────────────────────────────────────────────────────────────────────
 
 ui:
-	cd ui && npm run dev
+	cd ui && ELEVENLABS_VOICE_ID=$${ELEVENLABS_VOICE_ID:-onwK4e9ZLuTAKqWW03F9} npm run dev
 
 # ── mcp ───────────────────────────────────────────────────────────────────────
 
