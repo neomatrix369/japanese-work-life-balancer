@@ -48,6 +48,7 @@ export function TopBar({
   return (
     <div className="topbar" data-tour="controls">
       <span className="topbar-title">🌸 Work-Life Balancer</span>
+      <ThemeControl />
       {onPlayTour && (
         <button
           className="btn btn-tour"
@@ -132,9 +133,6 @@ export function TopBar({
         <option value="HR">HR</option>
         <option value="Executive">Executive</option>
       </select>
-
-      <div className="sep" />
-      <ThemeControl />
     </div>
   );
 }
