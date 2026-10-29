@@ -1,0 +1,13 @@
+model/target/
+ui/node_modules/
+ui/dist/
+mcp/.venv/
+data-gen/.venv/
+data-gen/out/
+**/__pycache__/
+.DS_Store
+timefold-license.pem
+*.pem
+.env
+.omc/
+**/.pytest_cache/
