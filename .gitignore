@@ -14,3 +14,4 @@ timefold-license.pem
 .logs/
 .gate-cache/
 ui/.tts-cache/
+HANDOFF.md
