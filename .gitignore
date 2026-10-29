@@ -12,3 +12,4 @@ timefold-license.pem
 .omc/
 **/.pytest_cache/
 .logs/
+.gate-cache/
