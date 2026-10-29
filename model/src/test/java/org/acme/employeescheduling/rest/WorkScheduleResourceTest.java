@@ -24,6 +24,12 @@ class WorkScheduleResourceTest {
     }
 
     @Test
+    void rootRedirectsToTheUi() {
+        given().redirects().follow(false).when().get("/").then().statusCode(303)
+                .header("Location", "http://localhost:5173");
+    }
+
+    @Test
     void rejectsUnknownPreset() {
         given().when().post("/schedules/scenario/tiny?preset=nope").then().statusCode(400);
     }
