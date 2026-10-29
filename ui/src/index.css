@@ -225,7 +225,7 @@ body {
 .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--fg-muted); flex-shrink: 0; }
 .status-dot.solving { background: var(--primary); animation: pulse 1s infinite; }
 .status-dot.done { background: var(--green); }
-.score-text { font-family: var(--font-mono); font-size: 12px; color: var(--fg-muted); }
+.score-text { font-family: var(--font-mono); font-size: 12px; color: var(--fg-muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .score-hard-ok { color: var(--green); font-weight: 600; }
 .score-hard-bad { color: var(--red); font-weight: 600; }
 
