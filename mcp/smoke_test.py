@@ -38,9 +38,9 @@ async def main() -> None:
             print(f"  {r.uri}")
 
         # --- Call compare_presets("burnout") ---
-        # Model is not running: expect a graceful "model unreachable" error.
+        # If the model is running this returns real results.
+        # If not, the tool returns a graceful "model unreachable" error.
         print("\nCalling compare_presets(scenario='burnout') ...")
-        print("(Model is not running — expecting a graceful error message)\n")
         result = await client.call_tool(
             "compare_presets",
             {"scenario": "burnout"},
