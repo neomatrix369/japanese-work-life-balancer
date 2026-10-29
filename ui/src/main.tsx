@@ -1,6 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
+import './theme.css'; // design-system theme layer: must stay the last stylesheet
 import { App } from './App';
 import { getStoredTheme, setTheme } from './theme';
 

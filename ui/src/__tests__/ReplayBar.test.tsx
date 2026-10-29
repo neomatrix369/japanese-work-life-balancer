@@ -80,7 +80,7 @@ describe('ReplayBar', () => {
 
   it('shows Play button when not playing', () => {
     render(<ReplayBar snapshots={SNAPS} replayIndex={null} onSeek={() => undefined} />);
-    expect(screen.getByText(/▶ Play/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Play replay' })).toHaveTextContent('Play');
   });
 
   it('slider has correct max value', () => {

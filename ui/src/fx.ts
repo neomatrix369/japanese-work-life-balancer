@@ -32,4 +32,4 @@ export function formatMoney(amountJPY: number, currency: Currency): string {
   })}`;
 }
 
-export const INDICATIVE_LABEL = 'indicative rates — MOCK';
+export const INDICATIVE_LABEL = 'indicative rates (MOCK)';
