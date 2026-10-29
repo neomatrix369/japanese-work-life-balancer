@@ -76,9 +76,9 @@ export function KpiCards({ kpis, currency, baselineKpis }: KpiCardsProps) {
     : undefined;
 
   return (
-    <div className="kpi-groups">
+    <div className="kpi-groups" data-tour="kpis">
       {/* Health group */}
-      <div className="kpi-group">
+      <div className="kpi-group" data-tour="kpi-health">
         <div className="kpi-group-label health">Health</div>
         <div className="kpi-grid">
           <KpiCard
@@ -110,7 +110,7 @@ export function KpiCards({ kpis, currency, baselineKpis }: KpiCardsProps) {
       </div>
 
       {/* Business group */}
-      <div className="kpi-group">
+      <div className="kpi-group" data-tour="kpi-business">
         <div className="kpi-group-label business">Business</div>
         <div className="kpi-grid">
           <KpiCard

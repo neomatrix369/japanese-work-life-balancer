@@ -9,6 +9,8 @@ interface WeekGridProps {
   selectedEmployeeId: string | null;
   onSelectEmployee: (id: string | null) => void;
   currency: Currency;
+  /** ISO date of a column to highlight (guided tour day walk) */
+  highlightDate?: string | null;
 }
 
 /** Return ISO yyyy-MM-dd for weekStart + offset days */
@@ -69,12 +71,14 @@ export function WeekGrid({
   selectedEmployeeId,
   onSelectEmployee,
   currency,
+  highlightDate = null,
 }: WeekGridProps) {
+  const hl = (day: string) => (day === highlightDate ? ' col-highlight' : '');
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(schedule.weekStart, i));
   const publicHols = new Set(schedule.publicHolidays ?? []);
 
   return (
-    <div className="card">
+    <div className="card" data-tour="week-grid">
       <div className="card-title">
         Week Grid — {schedule.name ?? ''} &nbsp;
         <span style={{ fontWeight: 400, fontSize: 11, color: 'var(--fg-muted)' }}>
@@ -87,7 +91,7 @@ export function WeekGrid({
             <tr>
               <th style={{ textAlign: 'left' }}>Employee</th>
               {weekDays.map((d) => (
-                <th key={d} className={publicHols.has(d) ? 'cell-public-holiday' : undefined}>
+                <th key={d} className={`${publicHols.has(d) ? 'cell-public-holiday' : ''}${hl(d)}` || undefined}>
                   {dayLabel(d)}
                 </th>
               ))}
@@ -120,7 +124,7 @@ export function WeekGrid({
                     const worked = hours > 0;
                     const cls = cellClass(day, approvedHols, publicHols, runPositions[day], worked);
                     return (
-                      <td key={day} className={cls}>
+                      <td key={day} className={`${cls}${hl(day)}`}>
                         {worked ? (
                           <span className="cell-hours">{hours.toFixed(1)}h</span>
                         ) : approvedHols.has(day) ? (
@@ -154,7 +158,7 @@ export function WeekGrid({
           </tbody>
         </table>
       </div>
-      <div className="mt-8" style={{ fontSize: 11, color: 'var(--fg-muted)', display: 'flex', gap: 16 }}>
+      <div className="mt-8" style={{ fontSize: 11, color: 'var(--fg-muted)', display: 'flex', flexWrap: 'wrap', gap: 16 }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <span className="cell-run-1" style={{ padding: '1px 8px', borderRadius: 4 }}>1–2d</span> healthy
         </span>

@@ -5,7 +5,7 @@ interface UnassignedTableProps {
   unassigned: UnassignedTask[];
 }
 
-const REASON_LABELS: Record<string, string> = {
+export const REASON_LABELS: Record<string, string> = {
   PUBLIC_HOLIDAY: 'Public holiday',
   NO_SKILLED_EMPLOYEE: 'No skilled employee',
   NO_SKILLED_EMPLOYEE_AVAILABLE: 'Skilled but unavailable',
@@ -27,7 +27,7 @@ function formatTaskDateTime(iso: string): string {
 
 export function UnassignedTable({ unassigned }: UnassignedTableProps) {
   return (
-    <div className="card">
+    <div className="card" data-tour="unassigned">
       <div className="card-title">
         Unassigned Tasks
         <span

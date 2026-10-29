@@ -104,7 +104,7 @@ export function CompareRuns({
   const canCompare = savedRun !== null && currentResponse !== null;
 
   return (
-    <div className="card">
+    <div className="card" data-tour="compare">
       <div
         className="card-title"
         style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}

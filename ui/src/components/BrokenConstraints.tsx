@@ -22,7 +22,7 @@ export function BrokenConstraints({ brokenConstraints, score }: BrokenConstraint
 
   return (
     <div className="card">
-      <div className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div className="card-title" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
         Broken Constraints
         <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 400, fontSize: 12, color: 'var(--fg-muted)' }}>
           score: {score || '–'}

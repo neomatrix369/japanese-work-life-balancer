@@ -5,6 +5,7 @@ import {
   fetchSchedule,
   stopSolve,
   normalizePerEmployee,
+  scoreHardCount,
   type Preset,
   type SolverStatus,
   type ScheduleResponse,
@@ -25,14 +26,11 @@ import { BrokenConstraints } from './components/BrokenConstraints';
 import { CompareRuns, type SavedRun } from './components/CompareRuns';
 import { LongevityView } from './components/LongevityView';
 import { ReplayBar } from './components/ReplayBar';
+import { TourOverlay } from './components/TourOverlay';
+import { useTour, type TourController } from './tour/useTour';
+import { weekDates } from './tour/narrate';
 
 const POLL_INTERVAL_MS = 2000;
-
-function scoreHardCount(score: string): number {
-  // Score format: "-1hard/-2medium/-300soft" or "0hard/..."
-  const m = score?.match(/(-?\d+)hard/);
-  return m ? Math.abs(parseInt(m[1], 10)) : 0;
-}
 
 export function App() {
   // ── Scenario list & model health ──────────────────────────────────────────
@@ -64,6 +62,20 @@ export function App() {
   const [role, setRole] = useState<Role>('Manager');
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  /** Settles the promise returned by runSolve (used by the guided tour). */
+  const solveWaiterRef = useRef<{
+    resolve: (r: ScheduleResponse) => void;
+    reject: (e: unknown) => void;
+  } | null>(null);
+  /** Bumped on every new solve / tour stop so a late job-id response is ignored. */
+  const solveGenRef = useRef(0);
+  const settleSolve = useCallback((result: ScheduleResponse | Error) => {
+    const w = solveWaiterRef.current;
+    solveWaiterRef.current = null;
+    if (!w) return;
+    if (result instanceof Error) w.reject(result);
+    else w.resolve(result);
+  }, []);
 
   // ── On mount: fetch scenario list ─────────────────────────────────────────
   useEffect(() => {
@@ -100,21 +112,27 @@ export function App() {
           if (isDone) {
             setSolving(false);
             stopPolling();
+            settleSolve(resp);
           }
         } catch {
           // keep polling — transient errors during solve are expected
         }
       }, POLL_INTERVAL_MS);
     },
-    [stopPolling],
+    [stopPolling, settleSolve],
   );
 
   useEffect(() => () => stopPolling(), [stopPolling]);
 
   // ── Solve / Stop handlers ──────────────────────────────────────────────────
-  const handleSolve = useCallback(async () => {
-    if (!selectedScenario) return;
-    try {
+  /** Start a solve and resolve with the final response once the solver is done. */
+  const runSolve = useCallback(
+    (scenario: string, solvePreset: Preset, limit: number): Promise<ScheduleResponse> => {
+      settleSolve(new Error('superseded by a new solve'));
+      const gen = ++solveGenRef.current;
+      const done = new Promise<ScheduleResponse>((resolve, reject) => {
+        solveWaiterRef.current = { resolve, reject };
+      });
       setSolving(true);
       setLiveScore('');
       setLiveStatus('SOLVING_SCHEDULED');
@@ -123,16 +141,35 @@ export function App() {
       setSnapshots([]);
       setReplayIndex(null);
       solveStartRef.current = Date.now();
-      const id = await startSolve(selectedScenario, preset, limitSeconds);
-      const trimmed = id.trim().replace(/^"|"$/g, ''); // some servers wrap in quotes
-      setJobId(trimmed);
-      startPolling(trimmed);
+      startSolve(scenario, solvePreset, limit)
+        .then((id) => {
+          const trimmed = id.trim().replace(/^"|"$/g, ''); // some servers wrap in quotes
+          if (gen !== solveGenRef.current) {
+            void stopSolve(trimmed).catch(() => undefined); // stopped before it started
+            return;
+          }
+          setJobId(trimmed);
+          startPolling(trimmed);
+        })
+        .catch((err) => {
+          setSolving(false);
+          settleSolve(err instanceof Error ? err : new Error(String(err)));
+        });
+      return done;
+    },
+    [startPolling, settleSolve],
+  );
+
+  const handleSolve = useCallback(async () => {
+    if (!selectedScenario) return;
+    try {
+      await runSolve(selectedScenario, preset, limitSeconds);
     } catch (err) {
-      setSolving(false);
+      if (String(err).includes('superseded') || String(err).includes('stopped')) return;
       console.error('Solve error:', err);
       alert(`Failed to start solve: ${String(err)}`);
     }
-  }, [selectedScenario, preset, limitSeconds, startPolling]);
+  }, [selectedScenario, preset, limitSeconds, runSolve]);
 
   const handleStop = useCallback(async () => {
     if (!jobId) return;
@@ -145,12 +182,14 @@ export function App() {
       setSnapshots((prev) =>
         recordSnapshot(prev, resp, solveStartRef.current, true),
       );
+      settleSolve(resp);
     } catch {
       // best effort
+      settleSolve(new Error('stopped'));
     } finally {
       setSolving(false);
     }
-  }, [jobId, stopPolling]);
+  }, [jobId, stopPolling, settleSolve]);
 
   // ── Compare helpers ────────────────────────────────────────────────────────
   const handleSaveRun = useCallback(() => {
@@ -160,6 +199,47 @@ export function App() {
       response: scheduleResponse,
     });
   }, [scheduleResponse, preset, selectedScenario]);
+
+  // ── Guided tour ("Play demo") — drives the same state as the controls ─────
+  const tourController: TourController = {
+    solveLive: (spec, limit) => {
+      setSelectedScenario(spec.scenario);
+      setPreset(spec.preset);
+      return runSolve(spec.scenario, spec.preset, limit);
+    },
+    stopLive: () => {
+      solveGenRef.current++;
+      stopPolling();
+      settleSolve(new Error('stopped'));
+      setSolving(false);
+      if (jobId) void stopSolve(jobId).catch(() => undefined);
+    },
+    applyFrame: (resp, first, final) => {
+      if (first) {
+        solveStartRef.current = Date.now();
+        setSnapshots([]);
+        setReplayIndex(null);
+      }
+      setScheduleResponse(resp);
+      setLiveScore(resp.score ?? '');
+      setLiveStatus(final ? 'NOT_SOLVING' : 'SOLVING_ACTIVE');
+      setSnapshots((prev) => recordSnapshot(first ? [] : prev, resp, solveStartRef.current, final));
+    },
+    show: (resp, spec) => {
+      setSelectedScenario(spec.scenario);
+      setPreset(spec.preset);
+      setReplayIndex(null);
+      setScheduleResponse(resp);
+      setLiveScore(resp.score ?? '');
+      setLiveStatus('NOT_SOLVING');
+    },
+    keep: (resp, spec) =>
+      setSavedRun({ label: `${spec.preset} — ${resp.schedule?.name ?? spec.scenario}`, response: resp }),
+  };
+  const tour = useTour(tourController, { current: scheduleResponse, currency });
+  const tourStep = tour.active ? tour.step : null;
+  /** The tour may show a role (HR view) without changing the user's own choice. */
+  const effectiveRole: Role = tourStep?.role ?? role;
 
   // ── Derived ───────────────────────────────────────────────────────────────
 
@@ -229,8 +309,10 @@ export function App() {
         onLimitChange={setLimitSeconds}
         currency={currency}
         onCurrencyChange={setCurrency}
-        role={role}
+        role={effectiveRole}
         onRoleChange={setRole}
+        onPlayTour={tour.start}
+        tourActive={tour.active}
         solving={solving}
         canSolve={!!selectedScenario && !modelDown}
         onSolve={handleSolve}
@@ -308,6 +390,11 @@ export function App() {
             selectedEmployeeId={selectedEmployeeId}
             onSelectEmployee={setSelectedEmployeeId}
             currency={currency}
+            highlightDate={
+              tourStep?.highlightDay !== undefined
+                ? weekDates(displayedResult)[tourStep.highlightDay]
+                : null
+            }
           />
         )}
 
@@ -336,7 +423,7 @@ export function App() {
         {displayedResult?.longevity && (
           <LongevityView
             longevity={displayedResult.longevity}
-            role={role}
+            role={effectiveRole}
             perEmployeeList={Object.values(perEmployee)}
           />
         )}
@@ -350,6 +437,27 @@ export function App() {
           employeeId={selectedEmployeeId}
           onClose={() => setSelectedEmployeeId(null)}
           currency={currency}
+        />
+      )}
+
+      {/* Guided tour */}
+      {tour.active && (
+        <TourOverlay
+          target={tour.step.target}
+          stepId={tour.step.id}
+          title={tour.step.title}
+          text={tour.text}
+          index={tour.index}
+          total={tour.total}
+          paused={tour.paused}
+          running={tour.running}
+          recorded={tour.recorded}
+          isLast={tour.isLast}
+          onNext={tour.next}
+          onBack={tour.back}
+          onTogglePause={tour.togglePause}
+          onExit={tour.exit}
+          onReplay={tour.start}
         />
       )}
     </div>

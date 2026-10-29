@@ -15,7 +15,7 @@ export function LongevityView({ longevity, role, perEmployeeList }: LongevityVie
   const canSeePerEmployee = role === 'HR' || role === 'Executive';
 
   return (
-    <div className="card">
+    <div className="card" data-tour="longevity">
       <div className="card-title">
         Longevity View
         <span

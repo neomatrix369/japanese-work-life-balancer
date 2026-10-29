@@ -195,6 +195,12 @@ export interface StatusResponse {
   preset: Preset;
 }
 
+/** Number of broken hard constraints from a score like "-1hard/-2medium/-300soft". */
+export function scoreHardCount(score: string): number {
+  const m = score?.match(/(-?\d+)hard/);
+  return m ? Math.abs(parseInt(m[1], 10)) : 0;
+}
+
 // ---------- API fetch functions ----------
 
 const BASE = '/api';
