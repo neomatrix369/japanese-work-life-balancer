@@ -20,6 +20,9 @@ interface TopBarProps {
   onStop: () => void;
   status: SolverStatus | null;
   score: string;
+  /** start the guided "Play demo" tour */
+  onPlayTour?: () => void;
+  tourActive?: boolean;
 }
 
 export function TopBar({
@@ -38,10 +41,23 @@ export function TopBar({
   canSolve,
   onSolve,
   onStop,
+  onPlayTour,
+  tourActive = false,
 }: TopBarProps) {
   return (
-    <div className="topbar">
+    <div className="topbar" data-tour="controls">
       <span className="topbar-title">🌸 Work-Life Balancer</span>
+      {onPlayTour && (
+        <button
+          className="btn btn-tour"
+          data-tour="play"
+          onClick={onPlayTour}
+          disabled={tourActive}
+          title="A 3-minute guided story of one week, hands-free"
+        >
+          ▶ Play demo
+        </button>
+      )}
       <div className="sep" />
 
       <label>Scenario</label>

@@ -32,14 +32,14 @@ No clicks needed here. Just talk.
 3. **Time limit** → `30s`.
 4. Click **Solve**. Watch the score update in the status bar.
 5. After solving finishes, point to:
-   - **At-risk count** (KPI card, Health group): `{{NUMBER: at-risk employee count, cost-first}}` employees in a 3+ consecutive-day run.
-   - **Average consecutive days**: `{{NUMBER: avg consecutive days, cost-first}}`.
-   - **Company profit**: `{{NUMBER: company profit JPY, cost-first}}` JPY
-     (switch currency to GBP → `{{NUMBER: company profit GBP, cost-first}}`).
+   - **At-risk count** (KPI card, Health group): `34` employees in a 3+ consecutive-day run.
+   - **Average consecutive days**: `3.8`.
+   - **Company profit**: `¥2,042,000` JPY
+     (switch currency to GBP → `£10,470`).
    - **Week grid**: point out the red and amber cells — those are employees at risk.
 6. Click **Keep this run for comparison**.
 
-> *"With cost-first, the solver minimises labor cost and ignores consecutive-day health risk. You can see {{NUMBER: at-risk employee count, cost-first}} people in the red or amber zone. The company earns {{NUMBER: company profit GBP, cost-first}} profit this week."*
+> *"With cost-first, the solver minimises labor cost and ignores consecutive-day health risk. You can see 34 people in the red or amber zone. The company earns £10,470 profit this week."*
 
 ---
 
@@ -51,17 +51,18 @@ No clicks needed here. Just talk.
 
    | KPI | cost-first | health-first | delta |
    |---|---|---|---|
-   | At-risk employees | `{{NUMBER: at-risk, cost-first}}` | `{{NUMBER: at-risk, health-first}}` | `{{NUMBER: at-risk delta}}` fewer |
-   | Avg consecutive days | `{{NUMBER: avg days, cost-first}}` | `{{NUMBER: avg days, health-first}}` | |
-   | Company profit (GBP) | `{{NUMBER: profit GBP, cost-first}}` | `{{NUMBER: profit GBP, health-first}}` | `{{NUMBER: profit delta GBP}}` |
-   | Idle hours | `{{NUMBER: idle hours, cost-first}}` | `{{NUMBER: idle hours, health-first}}` | |
+   | At-risk employees | `34` | `20` | `14` fewer |
+   | Avg consecutive days | `3.8` | `3.4` | |
+   | Labor cost (GBP) | `£10,640` | `£10,800` | +£160 |
+   | Company profit (GBP) | `£10,470` | `£10,670` | +£200 |
+   | Idle hours | `496` | `594` | |
 
 4. Point to the **broken constraints panel** — both runs show `0 hard`. No rule was ever broken.
 5. Scroll down to the **Solver replay bar**. Click **▶ Play** (or scrub the slider) to watch the solver
    improve the plan from its first guess to the final result. Switch speed to **4×** to make it snappy.
    Point out how the score improves with each step and how the week grid changes colour in real time.
 
-> *"Health-first uses a 10× penalty weight on consecutive-day runs. We go from {{NUMBER: at-risk, cost-first}} at-risk employees down to {{NUMBER: at-risk, health-first}}. That protection costs us {{NUMBER: profit delta GBP}} in profit this week — a number every HR director should be able to put in front of a board.*
+> *"Health-first uses a 10× penalty weight on consecutive-day runs. We go from 34 at-risk employees down to 20 — 14 fewer people risking burnout. The extra health protection costs £160 more in labor this week — about 1.5%. Profit even came out £200 higher in this run, because the people it picked happen to bill at higher rates, so here health didn't cost us profit at all. An HR director can now put an exact labor-cost figure in front of a board.*
 >
 > *And with the replay bar, you can see exactly how the solver got there — every improvement step, slowed down enough to explain."*
 
@@ -72,11 +73,11 @@ No clicks needed here. Just talk.
 1. **Scenario dropdown** → `overloaded`.
 2. **Preset** → `health-first`. Click **Solve**.
 3. When done, point to:
-   - **Unassigned tasks**: `{{NUMBER: unassigned count, overloaded}}` tasks.
-   - **Unassigned tasks table**: scroll the table and read out two or three reasons — "No employee has all of: …", "All eligible employees are at their limits".
+   - **Unassigned tasks**: `131` tasks.
+   - **Unassigned tasks table**: scroll the table and read out two or three reasons — "All eligible employees are at their limits or busy".
    - **Broken constraints**: still `0 hard`.
 
-> *"This week has 25% more work than the team can cover. The solver leaves {{NUMBER: unassigned count, overloaded}} tasks unassigned rather than exceeding a single hour limit. The reasons are listed explicitly — a manager can either redistribute work, hire temporary staff, or push tasks to next week. The plan is never made feasible by sacrificing someone's health."*
+> *"This week has 25% more work than the team can cover. The solver leaves 131 tasks unassigned rather than exceeding a single hour limit. The reasons are listed explicitly — a manager can either redistribute work, hire temporary staff, or push tasks to next week. The plan is never made feasible by sacrificing someone's health."*
 
 ---
 
@@ -108,8 +109,8 @@ Point to the output — the same numbers, now in natural language.
 
 1. Back in the browser, switch **Role** → `HR`.
 2. Scroll to the **Longevity view** panel.
-3. Point to average tenure (`{{NUMBER: avg tenure years}}` years), total unplanned absences in 3 months
-   (`{{NUMBER: total unplanned absences}}`), and retention rates (year 1: 88%, year 3: 74%, year 5: 63%).
+3. Point to average tenure (`11.5` years), total unplanned absences in 3 months
+   (`90`), and retention rates (year 1: 88%, year 3: 74%, year 5: 63%).
 
 > *"This week's plan is the short-term lever. The long-term question is: are people staying? Are absences trending up? HR and executives see these numbers next to the weekly plan. The connection between this week's schedule and whether someone is still here in three years is made explicit."*
 

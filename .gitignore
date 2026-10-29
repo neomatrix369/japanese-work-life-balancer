@@ -1,5 +1,5 @@
 model/target/
-ui/node_modules/
+ui/node_modules
 ui/dist/
 mcp/.venv/
 data-gen/.venv/
@@ -12,3 +12,4 @@ timefold-license.pem
 .omc/
 **/.pytest_cache/
 .logs/
+.gate-cache/
