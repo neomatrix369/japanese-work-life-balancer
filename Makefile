@@ -35,7 +35,9 @@ help:
 	@printf '\nToolchain overrides:\n'
 	@printf '  make model JAVA_HOME=/opt/homebrew/opt/openjdk@21\n'
 	@printf '  make model MVN=/usr/local/bin/mvn\n'
-	@printf '  make mcp MODEL_URL=http://localhost:8083\n\n'
+	@printf '  make mcp MODEL_URL=http://localhost:8083\n'
+	@printf '\nTour voice (optional): ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID, ELEVENLABS_MODEL_ID\n'
+	@printf '  see README.md -> "Voice narration (ElevenLabs)"\n\n'
 
 # ── setup ─────────────────────────────────────────────────────────────────────
 
