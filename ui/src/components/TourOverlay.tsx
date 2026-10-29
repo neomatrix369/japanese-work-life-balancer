@@ -1,4 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import type { TourVoice } from '../tour/useTourVoice';
+import { VoiceToggle } from './VoiceToggle';
 
 interface TourOverlayProps {
   /** `data-tour` anchor of the panel to spotlight; null = centred callout */
@@ -17,6 +19,8 @@ interface TourOverlayProps {
   onTogglePause: () => void;
   onExit: () => void;
   onReplay: () => void;
+  /** voice narration controls (optional) */
+  voice?: TourVoice;
 }
 
 interface Box {
@@ -81,7 +85,7 @@ export function placeCallout(
 export function TourOverlay(props: TourOverlayProps) {
   const {
     target, stepId, title, text, index, total, paused, running, recorded, isLast,
-    onNext, onBack, onTogglePause, onExit, onReplay,
+    onNext, onBack, onTogglePause, onExit, onReplay, voice,
   } = props;
   const [rect, setRect] = useState<Box | null>(null);
   const [viewport, setViewport] = useState({ width: window.innerWidth, height: window.innerHeight });
@@ -165,6 +169,7 @@ export function TourOverlay(props: TourOverlayProps) {
           <div className="tour-progress-fill" style={{ width: `${((index + 1) / total) * 100}%` }} />
         </div>
         <div className="tour-controls">
+          {voice && <VoiceToggle voice={voice} />}
           {isLast ? (
             <>
               <button className="btn" onClick={onBack}>← Back</button>

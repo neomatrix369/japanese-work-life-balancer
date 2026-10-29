@@ -28,6 +28,7 @@ import { LongevityView } from './components/LongevityView';
 import { ReplayBar } from './components/ReplayBar';
 import { TourOverlay } from './components/TourOverlay';
 import { useTour, type TourController } from './tour/useTour';
+import { createNarrator } from './tour/voice';
 import { weekDates } from './tour/narrate';
 
 const POLL_INTERVAL_MS = 2000;
@@ -236,7 +237,8 @@ export function App() {
     keep: (resp, spec) =>
       setSavedRun({ label: `${spec.preset} — ${resp.schedule?.name ?? spec.scenario}`, response: resp }),
   };
-  const tour = useTour(tourController, { current: scheduleResponse, currency });
+  const [narrator] = useState(createNarrator); // tour voice narration (POST /tts → browser voice fallback)
+  const tour = useTour(tourController, { current: scheduleResponse, currency }, undefined, narrator);
   const tourStep = tour.active ? tour.step : null;
   /** The tour may show a role (HR view) without changing the user's own choice. */
   const effectiveRole: Role = tourStep?.role ?? role;
@@ -490,6 +492,7 @@ export function App() {
           onTogglePause={tour.togglePause}
           onExit={tour.exit}
           onReplay={tour.start}
+          voice={tour.voice}
         />
       )}
     </div>
