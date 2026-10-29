@@ -1,0 +1,886 @@
+{
+  "name": "tiny",
+  "weekStart": "2026-11-09",
+  "shiftStart": "09:00",
+  "shiftEnd": "17:00",
+  "publicHolidays": [],
+  "retention": {
+    "year1": 0.88,
+    "year3": 0.74,
+    "year5": 0.63
+  },
+  "employees": [
+    {
+      "id": "E-001",
+      "name": "Aoki Haruto",
+      "skills": [
+        "accounting",
+        "data-analysis",
+        "it-support"
+      ],
+      "hourlyRate": 2400,
+      "billingRate": 4800,
+      "maxHoursPerDay": 8,
+      "maxHoursPerWeek": 40,
+      "minRestHours": 11,
+      "availability": [
+        {
+          "date": "2026-11-09",
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "date": "2026-11-10",
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "date": "2026-11-11",
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "date": "2026-11-12",
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "date": "2026-11-13",
+          "start": "09:00",
+          "end": "17:00"
+        }
+      ],
+      "daysOffRequested": [],
+      "avoidHours": [],
+      "consecutiveDaysBeforeWeek": 2,
+      "approvedHolidays": [],
+      "holidayDaysRemaining": 12,
+      "tenureYears": 8.5,
+      "unplannedAbsenceDays3m": 1
+    },
+    {
+      "id": "E-002",
+      "name": "Fujita Mei",
+      "skills": [
+        "customer-support",
+        "translation-en-ja",
+        "sales",
+        "design"
+      ],
+      "hourlyRate": 1800,
+      "billingRate": 3600,
+      "maxHoursPerDay": 8,
+      "maxHoursPerWeek": 40,
+      "minRestHours": 12,
+      "availability": [
+        {
+          "date": "2026-11-09",
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "date": "2026-11-10",
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "date": "2026-11-11",
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "date": "2026-11-12",
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "date": "2026-11-13",
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "date": "2026-11-14",
+          "start": "09:00",
+          "end": "17:00"
+        }
+      ],
+      "daysOffRequested": [
+        "2026-11-13"
+      ],
+      "avoidHours": [],
+      "consecutiveDaysBeforeWeek": 1,
+      "approvedHolidays": [],
+      "holidayDaysRemaining": 7,
+      "tenureYears": 3.2,
+      "unplannedAbsenceDays3m": 0
+    },
+    {
+      "id": "E-003",
+      "name": "Ishikawa Ren",
+      "skills": [
+        "it-support",
+        "logistics",
+        "accounting"
+      ],
+      "hourlyRate": 2100,
+      "billingRate": 3900,
+      "maxHoursPerDay": 8,
+      "maxHoursPerWeek": 30,
+      "minRestHours": 11,
+      "availability": [
+        {
+          "date": "2026-11-09",
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "date": "2026-11-10",
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "date": "2026-11-11",
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "date": "2026-11-12",
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "date": "2026-11-13",
+          "start": "09:00",
+          "end": "17:00"
+        }
+      ],
+      "daysOffRequested": [],
+      "avoidHours": [
+        {
+          "date": "2026-11-11",
+          "start": "15:00",
+          "end": "17:00"
+        }
+      ],
+      "consecutiveDaysBeforeWeek": 0,
+      "approvedHolidays": [
+        "2026-11-12"
+      ],
+      "holidayDaysRemaining": 15,
+      "tenureYears": 12.0,
+      "unplannedAbsenceDays3m": 2
+    },
+    {
+      "id": "E-004",
+      "name": "Kondo Yui",
+      "skills": [
+        "sales",
+        "customer-support",
+        "design"
+      ],
+      "hourlyRate": 2600,
+      "billingRate": 5500,
+      "maxHoursPerDay": 6,
+      "maxHoursPerWeek": 30,
+      "minRestHours": 11,
+      "availability": [
+        {
+          "date": "2026-11-09",
+          "start": "10:00",
+          "end": "17:00"
+        },
+        {
+          "date": "2026-11-10",
+          "start": "10:00",
+          "end": "17:00"
+        },
+        {
+          "date": "2026-11-11",
+          "start": "10:00",
+          "end": "17:00"
+        },
+        {
+          "date": "2026-11-12",
+          "start": "10:00",
+          "end": "17:00"
+        },
+        {
+          "date": "2026-11-13",
+          "start": "10:00",
+          "end": "17:00"
+        }
+      ],
+      "daysOffRequested": [],
+      "avoidHours": [],
+      "consecutiveDaysBeforeWeek": 0,
+      "approvedHolidays": [],
+      "holidayDaysRemaining": 4,
+      "tenureYears": 1.5,
+      "unplannedAbsenceDays3m": 0
+    },
+    {
+      "id": "E-005",
+      "name": "Matsuda Sora",
+      "skills": [
+        "data-analysis",
+        "it-support",
+        "accounting"
+      ],
+      "hourlyRate": 3200,
+      "billingRate": 6400,
+      "maxHoursPerDay": 8,
+      "maxHoursPerWeek": 20,
+      "minRestHours": 24,
+      "availability": [
+        {
+          "date": "2026-11-09",
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "date": "2026-11-10",
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "date": "2026-11-11",
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "date": "2026-11-12",
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "date": "2026-11-13",
+          "start": "09:00",
+          "end": "17:00"
+        }
+      ],
+      "daysOffRequested": [],
+      "avoidHours": [],
+      "consecutiveDaysBeforeWeek": 0,
+      "approvedHolidays": [],
+      "holidayDaysRemaining": 20,
+      "tenureYears": 21.3,
+      "unplannedAbsenceDays3m": 4
+    },
+    {
+      "id": "E-006",
+      "name": "Nakano Hina",
+      "skills": [
+        "design",
+        "sales",
+        "translation-en-ja",
+        "customer-support"
+      ],
+      "hourlyRate": 2000,
+      "billingRate": 4400,
+      "maxHoursPerDay": 8,
+      "maxHoursPerWeek": 40,
+      "minRestHours": 11,
+      "availability": [
+        {
+          "date": "2026-11-11",
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "date": "2026-11-12",
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "date": "2026-11-13",
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "date": "2026-11-14",
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "date": "2026-11-15",
+          "start": "09:00",
+          "end": "17:00"
+        }
+      ],
+      "daysOffRequested": [
+        "2026-11-15"
+      ],
+      "avoidHours": [],
+      "consecutiveDaysBeforeWeek": 0,
+      "approvedHolidays": [],
+      "holidayDaysRemaining": 9,
+      "tenureYears": 4.0,
+      "unplannedAbsenceDays3m": 1
+    },
+    {
+      "id": "E-007",
+      "name": "Ogawa Daiki",
+      "skills": [
+        "logistics",
+        "translation-en-ja",
+        "customer-support"
+      ],
+      "hourlyRate": 1600,
+      "billingRate": 2800,
+      "maxHoursPerDay": 4,
+      "maxHoursPerWeek": 20,
+      "minRestHours": 12,
+      "availability": [
+        {
+          "date": "2026-11-09",
+          "start": "09:00",
+          "end": "15:00"
+        },
+        {
+          "date": "2026-11-10",
+          "start": "09:00",
+          "end": "15:00"
+        },
+        {
+          "date": "2026-11-11",
+          "start": "09:00",
+          "end": "15:00"
+        },
+        {
+          "date": "2026-11-12",
+          "start": "09:00",
+          "end": "15:00"
+        },
+        {
+          "date": "2026-11-13",
+          "start": "09:00",
+          "end": "15:00"
+        }
+      ],
+      "daysOffRequested": [],
+      "avoidHours": [],
+      "consecutiveDaysBeforeWeek": 2,
+      "approvedHolidays": [],
+      "holidayDaysRemaining": 2,
+      "tenureYears": 0.7,
+      "unplannedAbsenceDays3m": 3
+    },
+    {
+      "id": "E-008",
+      "name": "Sakamoto Rin",
+      "skills": [
+        "customer-support",
+        "it-support",
+        "sales",
+        "data-analysis",
+        "logistics"
+      ],
+      "hourlyRate": 2200,
+      "billingRate": 4000,
+      "maxHoursPerDay": 8,
+      "maxHoursPerWeek": 40,
+      "minRestHours": 11,
+      "availability": [
+        {
+          "date": "2026-11-09",
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "date": "2026-11-10",
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "date": "2026-11-11",
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "date": "2026-11-12",
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "date": "2026-11-13",
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "date": "2026-11-14",
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "date": "2026-11-15",
+          "start": "09:00",
+          "end": "17:00"
+        }
+      ],
+      "daysOffRequested": [
+        "2026-11-09"
+      ],
+      "avoidHours": [
+        {
+          "date": "2026-11-10",
+          "start": "09:00",
+          "end": "11:00"
+        }
+      ],
+      "consecutiveDaysBeforeWeek": 1,
+      "approvedHolidays": [],
+      "holidayDaysRemaining": 11,
+      "tenureYears": 6.1,
+      "unplannedAbsenceDays3m": 0
+    }
+  ],
+  "tasks": [
+    {
+      "id": "T-0001",
+      "name": "Expense review",
+      "start": "2026-11-09T09:15:00",
+      "durationMinutes": 360,
+      "requiredSkills": [
+        "accounting"
+      ],
+      "employee": "E-001",
+      "pinned": true
+    },
+    {
+      "id": "T-0002",
+      "name": "VPN ticket",
+      "start": "2026-11-09T09:15:00",
+      "durationMinutes": 420,
+      "requiredSkills": [
+        "it-support"
+      ],
+      "employee": null,
+      "pinned": false
+    },
+    {
+      "id": "T-0003",
+      "name": "Banner design",
+      "start": "2026-11-09T09:30:00",
+      "durationMinutes": 300,
+      "requiredSkills": [
+        "design"
+      ],
+      "employee": null,
+      "pinned": false
+    },
+    {
+      "id": "T-0004",
+      "name": "Contract translation",
+      "start": "2026-11-09T09:30:00",
+      "durationMinutes": 240,
+      "requiredSkills": [
+        "translation-en-ja"
+      ],
+      "employee": null,
+      "pinned": false
+    },
+    {
+      "id": "T-0005",
+      "name": "Shipment planning",
+      "start": "2026-11-09T10:30:00",
+      "durationMinutes": 360,
+      "requiredSkills": [
+        "logistics"
+      ],
+      "employee": null,
+      "pinned": false
+    },
+    {
+      "id": "T-0006",
+      "name": "Ticket triage",
+      "start": "2026-11-09T11:30:00",
+      "durationMinutes": 240,
+      "requiredSkills": [
+        "customer-support",
+        "it-support"
+      ],
+      "employee": null,
+      "pinned": false
+    },
+    {
+      "id": "T-0007",
+      "name": "Contract translation",
+      "start": "2026-11-09T13:30:00",
+      "durationMinutes": 180,
+      "requiredSkills": [
+        "logistics",
+        "translation-en-ja"
+      ],
+      "employee": null,
+      "pinned": false
+    },
+    {
+      "id": "T-0008",
+      "name": "Churn analysis",
+      "start": "2026-11-10T09:00:00",
+      "durationMinutes": 240,
+      "requiredSkills": [
+        "data-analysis"
+      ],
+      "employee": null,
+      "pinned": false
+    },
+    {
+      "id": "T-0009",
+      "name": "Callback queue",
+      "start": "2026-11-10T10:15:00",
+      "durationMinutes": 360,
+      "requiredSkills": [
+        "customer-support"
+      ],
+      "employee": null,
+      "pinned": false
+    },
+    {
+      "id": "T-0010",
+      "name": "Contract translation",
+      "start": "2026-11-10T10:30:00",
+      "durationMinutes": 180,
+      "requiredSkills": [
+        "logistics",
+        "translation-en-ja"
+      ],
+      "employee": null,
+      "pinned": false
+    },
+    {
+      "id": "T-0011",
+      "name": "Website copy translation",
+      "start": "2026-11-10T10:45:00",
+      "durationMinutes": 150,
+      "requiredSkills": [
+        "translation-en-ja"
+      ],
+      "employee": null,
+      "pinned": false
+    },
+    {
+      "id": "T-0012",
+      "name": "Brochure layout",
+      "start": "2026-11-10T11:15:00",
+      "durationMinutes": 300,
+      "requiredSkills": [
+        "design"
+      ],
+      "employee": null,
+      "pinned": false
+    },
+    {
+      "id": "T-0013",
+      "name": "Callback queue",
+      "start": "2026-11-10T13:00:00",
+      "durationMinutes": 240,
+      "requiredSkills": [
+        "customer-support"
+      ],
+      "employee": null,
+      "pinned": false
+    },
+    {
+      "id": "T-0014",
+      "name": "Shipment planning",
+      "start": "2026-11-10T14:30:00",
+      "durationMinutes": 120,
+      "requiredSkills": [
+        "logistics"
+      ],
+      "employee": null,
+      "pinned": false
+    },
+    {
+      "id": "T-0015",
+      "name": "Shipment planning",
+      "start": "2026-11-11T09:00:00",
+      "durationMinutes": 60,
+      "requiredSkills": [
+        "logistics",
+        "sales"
+      ],
+      "employee": null,
+      "pinned": false
+    },
+    {
+      "id": "T-0016",
+      "name": "Brochure layout",
+      "start": "2026-11-11T10:15:00",
+      "durationMinutes": 120,
+      "requiredSkills": [
+        "design"
+      ],
+      "employee": null,
+      "pinned": false
+    },
+    {
+      "id": "T-0017",
+      "name": "Callback queue",
+      "start": "2026-11-11T10:30:00",
+      "durationMinutes": 120,
+      "requiredSkills": [
+        "customer-support"
+      ],
+      "employee": null,
+      "pinned": false
+    },
+    {
+      "id": "T-0018",
+      "name": "Printer fix",
+      "start": "2026-11-11T12:00:00",
+      "durationMinutes": 300,
+      "requiredSkills": [
+        "it-support"
+      ],
+      "employee": null,
+      "pinned": false
+    },
+    {
+      "id": "T-0019",
+      "name": "Ticket triage",
+      "start": "2026-11-11T12:30:00",
+      "durationMinutes": 240,
+      "requiredSkills": [
+        "customer-support"
+      ],
+      "employee": null,
+      "pinned": false
+    },
+    {
+      "id": "T-0020",
+      "name": "Weekly KPI report",
+      "start": "2026-11-11T12:30:00",
+      "durationMinutes": 90,
+      "requiredSkills": [
+        "data-analysis"
+      ],
+      "employee": null,
+      "pinned": false
+    },
+    {
+      "id": "T-0021",
+      "name": "Laptop setup",
+      "start": "2026-11-11T13:15:00",
+      "durationMinutes": 180,
+      "requiredSkills": [
+        "it-support"
+      ],
+      "employee": null,
+      "pinned": false
+    },
+    {
+      "id": "T-0022",
+      "name": "Laptop setup",
+      "start": "2026-11-12T09:00:00",
+      "durationMinutes": 420,
+      "requiredSkills": [
+        "it-support"
+      ],
+      "employee": null,
+      "pinned": false
+    },
+    {
+      "id": "T-0023",
+      "name": "Invoice reconciliation",
+      "start": "2026-11-12T11:00:00",
+      "durationMinutes": 300,
+      "requiredSkills": [
+        "accounting"
+      ],
+      "employee": null,
+      "pinned": false
+    },
+    {
+      "id": "T-0024",
+      "name": "Shipment planning",
+      "start": "2026-11-12T11:30:00",
+      "durationMinutes": 60,
+      "requiredSkills": [
+        "logistics"
+      ],
+      "employee": null,
+      "pinned": false
+    },
+    {
+      "id": "T-0025",
+      "name": "Banner design",
+      "start": "2026-11-12T11:30:00",
+      "durationMinutes": 300,
+      "requiredSkills": [
+        "design"
+      ],
+      "employee": null,
+      "pinned": false
+    },
+    {
+      "id": "T-0026",
+      "name": "Sales dashboard refresh",
+      "start": "2026-11-12T12:30:00",
+      "durationMinutes": 240,
+      "requiredSkills": [
+        "data-analysis"
+      ],
+      "employee": null,
+      "pinned": false
+    },
+    {
+      "id": "T-0027",
+      "name": "Ticket triage",
+      "start": "2026-11-12T13:45:00",
+      "durationMinutes": 120,
+      "requiredSkills": [
+        "customer-support"
+      ],
+      "employee": null,
+      "pinned": false
+    },
+    {
+      "id": "T-0028",
+      "name": "Brochure layout",
+      "start": "2026-11-12T14:00:00",
+      "durationMinutes": 180,
+      "requiredSkills": [
+        "design",
+        "translation-en-ja"
+      ],
+      "employee": null,
+      "pinned": false
+    },
+    {
+      "id": "T-0029",
+      "name": "Banner design",
+      "start": "2026-11-13T09:00:00",
+      "durationMinutes": 420,
+      "requiredSkills": [
+        "design"
+      ],
+      "employee": null,
+      "pinned": false
+    },
+    {
+      "id": "T-0030",
+      "name": "Banner design",
+      "start": "2026-11-13T09:00:00",
+      "durationMinutes": 300,
+      "requiredSkills": [
+        "design"
+      ],
+      "employee": null,
+      "pinned": false
+    },
+    {
+      "id": "T-0031",
+      "name": "Laptop setup",
+      "start": "2026-11-13T09:00:00",
+      "durationMinutes": 360,
+      "requiredSkills": [
+        "it-support"
+      ],
+      "employee": null,
+      "pinned": false
+    },
+    {
+      "id": "T-0032",
+      "name": "Expense review",
+      "start": "2026-11-13T10:00:00",
+      "durationMinutes": 240,
+      "requiredSkills": [
+        "accounting"
+      ],
+      "employee": null,
+      "pinned": false
+    },
+    {
+      "id": "T-0033",
+      "name": "Invoice reconciliation",
+      "start": "2026-11-13T11:45:00",
+      "durationMinutes": 180,
+      "requiredSkills": [
+        "accounting",
+        "data-analysis"
+      ],
+      "employee": null,
+      "pinned": false
+    },
+    {
+      "id": "T-0034",
+      "name": "Callback queue",
+      "start": "2026-11-13T12:15:00",
+      "durationMinutes": 90,
+      "requiredSkills": [
+        "customer-support"
+      ],
+      "employee": null,
+      "pinned": false
+    },
+    {
+      "id": "T-0035",
+      "name": "Ticket triage",
+      "start": "2026-11-14T09:00:00",
+      "durationMinutes": 90,
+      "requiredSkills": [
+        "customer-support"
+      ],
+      "employee": null,
+      "pinned": false
+    },
+    {
+      "id": "T-0036",
+      "name": "Proposal draft",
+      "start": "2026-11-14T09:15:00",
+      "durationMinutes": 300,
+      "requiredSkills": [
+        "sales"
+      ],
+      "employee": null,
+      "pinned": false
+    },
+    {
+      "id": "T-0037",
+      "name": "Website copy translation",
+      "start": "2026-11-14T12:15:00",
+      "durationMinutes": 60,
+      "requiredSkills": [
+        "translation-en-ja"
+      ],
+      "employee": null,
+      "pinned": false
+    },
+    {
+      "id": "T-0038",
+      "name": "Banner design",
+      "start": "2026-11-15T09:15:00",
+      "durationMinutes": 420,
+      "requiredSkills": [
+        "design"
+      ],
+      "employee": null,
+      "pinned": false
+    },
+    {
+      "id": "T-0039",
+      "name": "Weekly KPI report",
+      "start": "2026-11-15T12:00:00",
+      "durationMinutes": 150,
+      "requiredSkills": [
+        "data-analysis"
+      ],
+      "employee": null,
+      "pinned": false
+    },
+    {
+      "id": "T-0040",
+      "name": "Shipment planning",
+      "start": "2026-11-15T13:00:00",
+      "durationMinutes": 120,
+      "requiredSkills": [
+        "data-analysis",
+        "logistics"
+      ],
+      "employee": null,
+      "pinned": false
+    }
+  ]
+}
