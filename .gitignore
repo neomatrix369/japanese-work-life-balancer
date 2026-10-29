@@ -1,5 +1,5 @@
 model/target/
-ui/node_modules/
+ui/node_modules
 ui/dist/
 mcp/.venv/
 data-gen/.venv/
