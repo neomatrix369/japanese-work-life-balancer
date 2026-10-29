@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Preset, SolverStatus } from '../api';
 import type { Currency, Role } from '../types';
+import { ThemeControl } from './ThemeControl';
 
 interface TopBarProps {
   scenarios: string[];
@@ -131,6 +132,9 @@ export function TopBar({
         <option value="HR">HR</option>
         <option value="Executive">Executive</option>
       </select>
+
+      <div className="sep" />
+      <ThemeControl />
     </div>
   );
 }

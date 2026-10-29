@@ -35,8 +35,7 @@ function MaxLimitShape(props: unknown) {
       y1={y}
       x2={x + width}
       y2={y}
-      stroke="#f59e0b"
-      strokeWidth={2.5}
+      style={{ stroke: 'var(--warn)', strokeWidth: 2.5 }}
       strokeDasharray="5 3"
     />
   );
@@ -106,10 +105,10 @@ export function HoursChart({ schedule, perEmployee }: HoursChartProps) {
                   key={`cell-${index}`}
                   fill={
                     entry.atRisk
-                      ? 'var(--red)'
+                      ? 'var(--chart-3)'
                       : entry.hours >= entry.weeklyMax * 0.9
-                      ? 'var(--amber)'
-                      : 'var(--primary)'
+                      ? 'var(--chart-2)'
+                      : 'var(--chart-1)'
                   }
                 />
               ))}
