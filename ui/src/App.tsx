@@ -13,6 +13,7 @@ import {
 import type { Currency } from './fx';
 import { INDICATIVE_LABEL } from './fx';
 import type { Role } from './api';
+import { recordSnapshot, type ReplaySnapshot } from './replay';
 
 import { TopBar } from './components/TopBar';
 import { KpiCards } from './components/KpiCards';
@@ -23,6 +24,7 @@ import { UnassignedTable } from './components/UnassignedTable';
 import { BrokenConstraints } from './components/BrokenConstraints';
 import { CompareRuns, type SavedRun } from './components/CompareRuns';
 import { LongevityView } from './components/LongevityView';
+import { ReplayBar } from './components/ReplayBar';
 
 const POLL_INTERVAL_MS = 2000;
 
@@ -48,6 +50,12 @@ export function App() {
   const [liveScore, setLiveScore] = useState('');
   const [liveStatus, setLiveStatus] = useState<SolverStatus | null>(null);
   const [scheduleResponse, setScheduleResponse] = useState<ScheduleResponse | null>(null);
+
+  // ── Replay state ──────────────────────────────────────────────────────────
+  const [snapshots, setSnapshots] = useState<ReplaySnapshot[]>([]);
+  /** null = live (show scheduleResponse); number = index into snapshots */
+  const [replayIndex, setReplayIndex] = useState<number | null>(null);
+  const solveStartRef = useRef<number>(0);
 
   // ── UI state ──────────────────────────────────────────────────────────────
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
@@ -84,7 +92,12 @@ export function App() {
           setLiveScore(resp.score ?? '');
           setLiveStatus(resp.status);
           setScheduleResponse(resp);
-          if (resp.status !== 'SOLVING_ACTIVE' && resp.status !== 'SOLVING_SCHEDULED') {
+          const isDone =
+            resp.status !== 'SOLVING_ACTIVE' && resp.status !== 'SOLVING_SCHEDULED';
+          setSnapshots((prev) =>
+            recordSnapshot(prev, resp, solveStartRef.current, isDone),
+          );
+          if (isDone) {
             setSolving(false);
             stopPolling();
           }
@@ -106,6 +119,10 @@ export function App() {
       setLiveScore('');
       setLiveStatus('SOLVING_SCHEDULED');
       setScheduleResponse(null);
+      // Clear replay state for the new solve.
+      setSnapshots([]);
+      setReplayIndex(null);
+      solveStartRef.current = Date.now();
       const id = await startSolve(selectedScenario, preset, limitSeconds);
       const trimmed = id.trim().replace(/^"|"$/g, ''); // some servers wrap in quotes
       setJobId(trimmed);
@@ -125,6 +142,9 @@ export function App() {
       setScheduleResponse(resp);
       setLiveScore(resp.score ?? '');
       setLiveStatus('NOT_SOLVING');
+      setSnapshots((prev) =>
+        recordSnapshot(prev, resp, solveStartRef.current, true),
+      );
     } catch {
       // best effort
     } finally {
@@ -142,12 +162,33 @@ export function App() {
   }, [scheduleResponse, preset, selectedScenario]);
 
   // ── Derived ───────────────────────────────────────────────────────────────
-  const perEmployee: Record<string, PerEmployeeKpi> = scheduleResponse
-    ? normalizePerEmployee(scheduleResponse.perEmployee)
+
+  /**
+   * Single source of truth for what the panels render:
+   *  - In live mode (replayIndex = null): use the latest scheduleResponse.
+   *  - In replay mode: use the frozen snapshot response.
+   * CompareRuns always uses scheduleResponse (final result) regardless.
+   */
+  const displayedResult: ScheduleResponse | null =
+    replayIndex !== null && snapshots[replayIndex]
+      ? snapshots[replayIndex].response
+      : scheduleResponse;
+
+  /** First-snapshot KPIs; defined only while replaying (for delta arrows). */
+  const baselineKpis =
+    replayIndex !== null && snapshots.length > 0
+      ? snapshots[0].response.kpis
+      : undefined;
+
+  const perEmployee: Record<string, PerEmployeeKpi> = displayedResult
+    ? normalizePerEmployee(displayedResult.perEmployee)
     : {};
 
   const isHardViolated =
     liveScore !== '' && scoreHardCount(liveScore) > 0;
+
+  /** Show replay bar once solving is complete and we have captured steps. */
+  const showReplayBar = !solving && snapshots.length > 0;
 
   return (
     <div className="app">
@@ -230,14 +271,27 @@ export function App() {
         )}
       </div>
 
+      {/* Replay bar — shown after solve completes */}
+      {showReplayBar && (
+        <ReplayBar
+          snapshots={snapshots}
+          replayIndex={replayIndex}
+          onSeek={setReplayIndex}
+        />
+      )}
+
       {/* Main panels */}
       <div className="main-content">
         {/* KPI cards — show when there's any response */}
-        {scheduleResponse?.kpis && (
-          <KpiCards kpis={scheduleResponse.kpis} currency={currency} />
+        {displayedResult?.kpis && (
+          <KpiCards
+            kpis={displayedResult.kpis}
+            currency={currency}
+            baselineKpis={baselineKpis}
+          />
         )}
 
-        {/* Compare runs — always visible */}
+        {/* Compare runs — always uses the live/final result, not replay frame */}
         <CompareRuns
           savedRun={savedRun}
           currentResponse={scheduleResponse}
@@ -247,9 +301,9 @@ export function App() {
         />
 
         {/* Week grid */}
-        {scheduleResponse?.schedule && (
+        {displayedResult?.schedule && (
           <WeekGrid
-            schedule={scheduleResponse.schedule}
+            schedule={displayedResult.schedule}
             perEmployee={perEmployee}
             selectedEmployeeId={selectedEmployeeId}
             onSelectEmployee={setSelectedEmployeeId}
@@ -258,30 +312,30 @@ export function App() {
         )}
 
         {/* Hours chart */}
-        {scheduleResponse?.schedule && Object.keys(perEmployee).length > 0 && (
+        {displayedResult?.schedule && Object.keys(perEmployee).length > 0 && (
           <HoursChart
-            schedule={scheduleResponse.schedule}
+            schedule={displayedResult.schedule}
             perEmployee={perEmployee}
           />
         )}
 
         {/* Unassigned tasks */}
-        {scheduleResponse && (
-          <UnassignedTable unassigned={scheduleResponse.unassigned ?? []} />
+        {displayedResult && (
+          <UnassignedTable unassigned={displayedResult.unassigned ?? []} />
         )}
 
         {/* Broken constraints */}
-        {scheduleResponse && (
+        {displayedResult && (
           <BrokenConstraints
-            brokenConstraints={scheduleResponse.brokenConstraints ?? []}
-            score={scheduleResponse.score ?? ''}
+            brokenConstraints={displayedResult.brokenConstraints ?? []}
+            score={displayedResult.score ?? ''}
           />
         )}
 
         {/* Longevity view */}
-        {scheduleResponse?.longevity && (
+        {displayedResult?.longevity && (
           <LongevityView
-            longevity={scheduleResponse.longevity}
+            longevity={displayedResult.longevity}
             role={role}
             perEmployeeList={Object.values(perEmployee)}
           />
@@ -289,9 +343,9 @@ export function App() {
       </div>
 
       {/* Employee side panel */}
-      {selectedEmployeeId && scheduleResponse?.schedule && (
+      {selectedEmployeeId && displayedResult?.schedule && (
         <EmployeeSidePanel
-          schedule={scheduleResponse.schedule}
+          schedule={displayedResult.schedule}
           perEmployee={perEmployee}
           employeeId={selectedEmployeeId}
           onClose={() => setSelectedEmployeeId(null)}
