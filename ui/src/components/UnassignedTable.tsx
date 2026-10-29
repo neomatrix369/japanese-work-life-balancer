@@ -1,4 +1,5 @@
 import React from 'react';
+import { CheckCircle2 } from 'lucide-react';
 import type { UnassignedTask } from '../api';
 import { CollapsiblePanel } from './CollapsiblePanel';
 
@@ -53,7 +54,7 @@ export function UnassignedTable({ unassigned }: UnassignedTableProps) {
       defaultOpen={true}
     >
       {unassigned.length === 0 ? (
-        <div className="all-clear">✓ All tasks assigned</div>
+        <div className="all-clear"><CheckCircle2 size={16} aria-hidden="true" />All tasks assigned</div>
       ) : (
         <div className="scroll-x">
           <table className="data-table">

@@ -2,6 +2,7 @@ import React from 'react';
 import type { WorkSchedule, Task, PerEmployeeKpi } from '../api';
 import type { Currency } from '../types';
 import { formatMoney } from '../fx';
+import { Pin, X } from 'lucide-react';
 
 interface EmployeeSidePanelProps {
   schedule: WorkSchedule;
@@ -40,7 +41,7 @@ export function EmployeeSidePanel({
   return (
     <div className="side-panel-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="side-panel" style={{ position: 'relative' }}>
-        <button className="side-panel-close" onClick={onClose} aria-label="Close">×</button>
+        <button className="side-panel-close" onClick={onClose} aria-label="Close"><X size={18} aria-hidden="true" /></button>
 
         <h3>{employee.name}</h3>
         <div style={{ fontSize: 12, color: 'var(--fg-muted)', marginBottom: 12 }}>
@@ -54,7 +55,7 @@ export function EmployeeSidePanel({
               { label: 'Total hours', value: `${kpi.totalHours.toFixed(1)} h` },
               { label: 'Idle hours', value: `${kpi.idleHours.toFixed(1)} h` },
               { label: 'Days worked', value: String(kpi.daysWorked) },
-              { label: 'Max consec.', value: `${kpi.maxConsecutiveDays}d${kpi.atRisk ? ' ⚠' : ''}` },
+              { label: 'Max consec.', value: `${kpi.maxConsecutiveDays}d${kpi.atRisk ? ', at risk' : ''}` },
               { label: 'Labor cost', value: formatMoney(kpi.laborCost, currency) },
               { label: 'Revenue', value: formatMoney(kpi.revenue, currency) },
               { label: 'Profit', value: formatMoney(kpi.profit, currency) },
@@ -92,7 +93,8 @@ export function EmployeeSidePanel({
                       fontWeight: 700,
                     }}
                   >
-                    📌 pinned
+                    <Pin size={10} aria-hidden="true" style={{ verticalAlign: -1, marginRight: 3 }} />
+                    pinned
                   </span>
                 )}
               </div>

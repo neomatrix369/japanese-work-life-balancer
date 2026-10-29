@@ -127,6 +127,46 @@ Keyboard: **Space** pause/resume, **← →** back/next, **Esc** exit.
 16. Every panel is **collapsible**: click its header to fold it away; the page remembers your choice.
     The guided tour opens a folded panel when it needs to point at it.
 
+### Look and feel
+
+The design language lives in [`design-system/MASTER.md`](design-system/MASTER.md): colour tokens named by meaning
+(`--ink`, `--surface`, `--accent`, `--signal-good/warn/bad`), a type and spacing scale, and motion timings, with every
+text colour pair at 4.5:1 contrast or better in light and dark. [`ui/src/theme.css`](ui/src/theme.css) is loaded last
+and only restyles existing classes, so visual changes never touch component markup. Icons are SVG
+([Lucide](https://lucide.dev)); animations switch off when the system asks for reduced motion.
+
+### Voice narration (ElevenLabs)
+
+The **▶ Play demo** tour reads each step aloud and waits for the line to finish before it moves on.
+Press **🔊/🔇** in the tour controls (or **M**) to mute. The app remembers your choice.
+
+**Environment variables.** These belong to *this app*, not to ElevenLabs. The Vite dev server reads
+them in `ui/tts-plugin.ts` when it handles each request.
+
+| Variable | Needed? | Default | What it does |
+|---|---|---|---|
+| `ELEVENLABS_API_KEY` | Required for the premium voice | — | Key permissions: **Text to Speech** (required), **Voices: Read** (to browse or confirm voices), **Models: Read** and **User: Read** (optional) |
+| `ELEVENLABS_VOICE_ID` | Optional | `pFZP5JQG7iQjIQuC4Bku` ("Lily", a warm British female narrator) | Which voice reads the tour |
+| `ELEVENLABS_MODEL_ID` | Optional | `eleven_multilingual_v2` | Speech model (it says Japanese names well) |
+
+**Find a voice ID.**
+- In the dashboard, open **Voices** (or the **Voice Library**), open the voice's **⋯** menu, then
+  choose **Copy voice ID**. You must add a Library voice to **My Voices** before you can use it. A
+  Japanese-accented English voice from the Library works well for this app.
+- From the API (needs **Voices: Read**):
+  `curl -s -H "xi-api-key: $ELEVENLABS_API_KEY" https://api.elevenlabs.io/v1/voices | jq '.voices[] | {name, voice_id}'`
+
+**Apply it.** Add `export ELEVENLABS_VOICE_ID=<id>` to `~/.zshrc`, or set it for one run with
+`ELEVENLABS_VOICE_ID=<id> make demo`. Then restart `make demo`. Audio is cached in `ui/.tts-cache/`
+(git-ignored). The cache key includes the voice, so switching voices never replays old audio. Delete
+that folder to free space.
+
+**Without a working key.** If `/tts` fails or takes more than 4 s, your browser's own British voice
+reads the tour, and the tour controls show a small "browser voice" note. The tour keeps running either way.
+
+**The key never reaches the browser.** The browser posts text to `POST /tts` on the Vite server, and
+only the server calls ElevenLabs. The key is not in the built bundle.
+
 ### Use it from Claude
 
 Register the MCP server (the model must be running):

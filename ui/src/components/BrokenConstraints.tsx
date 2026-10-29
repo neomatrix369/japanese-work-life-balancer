@@ -1,4 +1,5 @@
 import React from 'react';
+import { Check, CheckCircle2, X } from 'lucide-react';
 import type { BrokenConstraint } from '../api';
 import { CollapsiblePanel } from './CollapsiblePanel';
 
@@ -28,11 +29,11 @@ export function BrokenConstraints({ brokenConstraints, score }: BrokenConstraint
       </span>
       {hardCount === 0 ? (
         <span style={{ background: 'var(--green-bg)', color: 'var(--green)', borderRadius: 12, padding: '2px 10px', fontSize: 12, fontWeight: 700, textTransform: 'none', letterSpacing: 0 }}>
-          0 hard ✓
+          0 hard <Check size={12} aria-hidden="true" style={{ verticalAlign: -1 }} />
         </span>
       ) : (
         <span style={{ background: 'var(--red-bg)', color: 'var(--red)', borderRadius: 12, padding: '2px 10px', fontSize: 12, fontWeight: 700, textTransform: 'none', letterSpacing: 0 }}>
-          {hardCount} hard ✗
+          {hardCount} hard <X size={12} aria-hidden="true" style={{ verticalAlign: -1 }} />
         </span>
       )}
     </>
@@ -47,7 +48,7 @@ export function BrokenConstraints({ brokenConstraints, score }: BrokenConstraint
       defaultOpen={true}
     >
       {brokenConstraints.length === 0 ? (
-        <div className="all-clear">✓ No constraints broken — plan is fully feasible</div>
+        <div className="all-clear"><CheckCircle2 size={16} aria-hidden="true" />No constraints broken: the plan is fully feasible.</div>
       ) : (
         <div>
           {[...hard, ...medium, ...soft].map((c, i) => (

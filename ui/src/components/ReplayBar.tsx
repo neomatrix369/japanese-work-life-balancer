@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Pause, Play } from 'lucide-react';
 import type { ReplaySnapshot } from '../replay';
 
 interface ReplayBarProps {
@@ -113,7 +114,7 @@ export function ReplayBar({ snapshots, replayIndex, onSeek }: ReplayBarProps) {
           onClick={handlePlayPause}
           aria-label={playing ? 'Pause replay' : 'Play replay'}
         >
-          {playing ? '⏸ Pause' : '▶ Play'}
+          {playing ? <><Pause size={14} aria-hidden="true" />Pause</> : <><Play size={14} aria-hidden="true" />Play</>}
         </button>
 
         <input

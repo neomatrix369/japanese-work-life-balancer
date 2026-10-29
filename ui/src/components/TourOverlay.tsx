@@ -1,4 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import type { TourVoice } from '../tour/useTourVoice';
+import { VoiceToggle } from './VoiceToggle';
+import { ChevronLeft, ChevronRight, Pause, Play, RotateCcw, X } from 'lucide-react';
 
 interface TourOverlayProps {
   /** `data-tour` anchor of the panel to spotlight; null = centred callout */
@@ -17,6 +20,8 @@ interface TourOverlayProps {
   onTogglePause: () => void;
   onExit: () => void;
   onReplay: () => void;
+  /** voice narration controls (optional) */
+  voice?: TourVoice;
 }
 
 interface Box {
@@ -81,7 +86,7 @@ export function placeCallout(
 export function TourOverlay(props: TourOverlayProps) {
   const {
     target, stepId, title, text, index, total, paused, running, recorded, isLast,
-    onNext, onBack, onTogglePause, onExit, onReplay,
+    onNext, onBack, onTogglePause, onExit, onReplay, voice,
   } = props;
   const [rect, setRect] = useState<Box | null>(null);
   const [viewport, setViewport] = useState({ width: window.innerWidth, height: window.innerHeight });
@@ -183,7 +188,7 @@ export function TourOverlay(props: TourOverlayProps) {
               {index + 1} / {total}
             </span>
             <h2 id="tour-title" className="tour-title">{title}</h2>
-            <button className="tour-x" onClick={onExit} aria-label="Exit tour" title="Exit (Esc)">×</button>
+            <button className="tour-x" onClick={onExit} aria-label="Exit tour" title="Exit (Esc)"><X size={18} aria-hidden="true" /></button>
           </div>
           <p id="tour-text" className="tour-text" aria-live="polite">
             {text}
@@ -196,20 +201,21 @@ export function TourOverlay(props: TourOverlayProps) {
         </div>
         {/* controls + hint are always visible — never inside the scrollable body */}
         <div className="tour-controls">
+          {voice && <VoiceToggle voice={voice} />}
           {isLast ? (
             <>
-              <button className="btn" onClick={onBack}>← Back</button>
-              <button className="btn" onClick={onReplay}>↺ Replay tour</button>
+              <button className="btn" onClick={onBack}><ChevronLeft size={15} aria-hidden="true" />Back</button>
+              <button className="btn" onClick={onReplay}><RotateCcw size={14} aria-hidden="true" />Replay tour</button>
               <button className="btn btn-primary" onClick={onExit} data-autofocus>Close</button>
             </>
           ) : (
             <>
-              <button className="btn" onClick={onBack} disabled={index === 0}>← Back</button>
+              <button className="btn" onClick={onBack} disabled={index === 0}><ChevronLeft size={15} aria-hidden="true" />Back</button>
               <button className="btn" onClick={onTogglePause} aria-pressed={paused}>
-                {paused ? '▶ Resume' : '⏸ Pause'}
+                {paused ? <><Play size={14} aria-hidden="true" />Resume</> : <><Pause size={14} aria-hidden="true" />Pause</>}
               </button>
               <button className="btn btn-primary" onClick={onNext} disabled={running} data-autofocus>
-                {running ? 'Solving…' : 'Next →'}
+                {running ? 'Solving…' : <>Next<ChevronRight size={15} aria-hidden="true" /></>}
               </button>
               <button className="btn tour-skip" onClick={onExit}>Skip</button>
             </>

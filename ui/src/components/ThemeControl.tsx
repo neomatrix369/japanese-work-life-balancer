@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
+import { Monitor, Moon, Sun, type LucideIcon } from 'lucide-react';
 import { getStoredTheme, setTheme, type Theme } from '../theme';
 
-const OPTIONS: { value: Theme; icon: string; label: string }[] = [
-  { value: 'light', icon: '☀', label: 'Light' },
-  { value: 'dark', icon: '☾', label: 'Dark' },
-  { value: 'system', icon: '🖥', label: 'System' },
+const OPTIONS: { value: Theme; Icon: LucideIcon; label: string }[] = [
+  { value: 'light', Icon: Sun, label: 'Light' },
+  { value: 'dark', Icon: Moon, label: 'Dark' },
+  { value: 'system', Icon: Monitor, label: 'System' },
 ];
 
 /**
@@ -31,7 +32,7 @@ export function ThemeControl() {
           title={`${o.label} theme`}
           onClick={() => handleChange(o.value)}
         >
-          <span aria-hidden="true">{o.icon}</span>
+          <o.Icon size={14} aria-hidden="true" />
         </button>
       ))}
     </div>

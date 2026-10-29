@@ -66,7 +66,7 @@ export function stepRunKey(step: TourStep): RunKey | undefined {
 const solving = (key: RunKey, intro: string) => (ctx: NarrationCtx) => {
   const done = ctx.results[key];
   if (done && !ctx.running) return `${intro} ${resultSentence(done, ctx.currency)}`;
-  return `${intro} Every 2 s the solver finds a better plan — watch the numbers move. ${progressSentence(ctx.current, ctx.currency)}`;
+  return `${intro} Every 2 s the solver finds a better plan. Watch the numbers move. ${progressSentence(ctx.current, ctx.currency)}`;
 };
 
 const withRun = (key: RunKey, build: (r: ScheduleResponse, ctx: NarrationCtx) => string) =>
@@ -96,7 +96,7 @@ export const TOUR_STEPS: TourStep[] = [
     title: 'A week at a Tokyo company',
     target: 'controls',
     text: (ctx) =>
-      `Meet a Tokyo company with ${ctx.teamSize ?? 'its'} employees — every name and number is fictional. In Japan, long runs of work days are linked to burnout and karoshi (death from overwork). Let's plan next week with these controls.`,
+      `Meet a Tokyo company with ${ctx.teamSize ?? 'its'} employees. Every name and number is fictional. In Japan, long runs of work days are linked to burnout and karoshi (death from overwork). Let's plan next week with these controls.`,
   },
   {
     id: 'solve-cost',
@@ -147,7 +147,7 @@ export const TOUR_STEPS: TourStep[] = [
     title: 'Plan 2: health first',
     target: 'kpis',
     solve: 'health',
-    text: solving('health', 'Same week, same people — now the solver puts health first.'),
+    text: solving('health', 'Same week, same people. Now the solver puts health first.'),
   },
   {
     id: 'compare',
@@ -185,7 +185,7 @@ export const TOUR_STEPS: TourStep[] = [
     show: 'overloaded',
     role: 'HR',
     text: withRun('overloaded', (r) =>
-      `HR sees tenure and unplanned absences per person — the long-term signs of overwork. ${longevitySentence(r)}`,
+      `HR sees tenure and unplanned absences per person: the long-term signs of overwork. ${longevitySentence(r)}`,
     ),
   },
   {
@@ -193,7 +193,7 @@ export const TOUR_STEPS: TourStep[] = [
     title: 'That’s the idea',
     target: null,
     text: () =>
-      'Hard rules are never broken. Health comes before cost — and the cost is visible, in yen and pounds, before anyone signs off the week.',
+      'Hard rules are never broken. Health comes before cost, and the cost is visible, in yen and pounds, before anyone signs off the week.',
   },
 ];
 

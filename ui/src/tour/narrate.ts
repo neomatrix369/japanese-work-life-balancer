@@ -174,7 +174,7 @@ function dayStory(views: EmployeeView[], date: string, prev: string | null, used
 
   // 2. Someone on an approved holiday.
   const holiday = pool.find((v) => (v.employee.approvedHolidays ?? []).includes(date));
-  if (holiday) return take(holiday, `${holiday.san} is on approved holiday — the plan works around it.`);
+  if (holiday) return take(holiday, `${holiday.san} is on approved holiday, and the plan works around it.`);
 
   // 3. The longest run still going today.
   const onRun = pool
@@ -183,7 +183,7 @@ function dayStory(views: EmployeeView[], date: string, prev: string | null, used
   if (onRun) {
     const n = onRun.runByDate[date] ?? 1;
     const h = onRun.kpi.hoursPerDay[date] ?? 0;
-    return take(onRun, `${onRun.san} works ${h} h today — day ${n} in a row.`);
+    return take(onRun, `${onRun.san} works ${h} h today, day ${n} in a row.`);
   }
   return 'Nobody is scheduled today.';
 }
@@ -257,9 +257,9 @@ export function compareSentence(a: ScheduleResponse, b: ScheduleResponse, curren
         : 'Labor cost is unchanged.';
   const profit =
     f.profitDelta > 0
-      ? ` Profit went up by ${moneyBoth(f.profitDelta, currency)} too — different people, with different billing rates, did the work.`
+      ? ` Profit went up by ${moneyBoth(f.profitDelta, currency)} too: different people, with different billing rates, did the work.`
       : f.profitDelta < 0
-        ? ` Profit is ${moneyBoth(-f.profitDelta, currency)} lower — that is the visible price of protecting health.`
+        ? ` Profit is ${moneyBoth(-f.profitDelta, currency)} lower. That is the visible price of protecting health.`
         : '';
   return `${risk} ${labor}${profit}`;
 }
@@ -284,14 +284,14 @@ export function unassignedSentence(resp: ScheduleResponse): string {
   const parts = unassignedByReason(resp)
     .map((r) => `${r.count} × “${r.label.toLowerCase()}”`)
     .join(', ');
-  return `${plural(total, 'task')} stay unassigned — each with a reason: ${parts}. Hard rules broken: ${scoreHardCount(resp.score ?? '')}.`;
+  return `${plural(total, 'task')} stay unassigned, each with a reason: ${parts}. Hard rules broken: ${scoreHardCount(resp.score ?? '')}.`;
 }
 
 export function hardSentence(resp: ScheduleResponse): string {
   const hard = scoreHardCount(resp.score ?? '');
   return hard === 0
-    ? 'The score shows 0 hard — no legal rule (hours, rest, holidays) is broken.'
-    : `The score shows ${hard} hard — some legal rules are still broken.`;
+    ? 'The score shows 0 hard: no legal rule (hours, rest, holidays) is broken.'
+    : `The score shows ${hard} hard: some legal rules are still broken.`;
 }
 
 export function progressSentence(resp: ScheduleResponse | null, currency: Currency): string {

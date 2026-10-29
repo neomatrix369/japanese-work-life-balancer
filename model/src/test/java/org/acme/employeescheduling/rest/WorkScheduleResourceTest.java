@@ -35,6 +35,18 @@ class WorkScheduleResourceTest {
     }
 
     @Test
+    void allowsTheDashboardFromAnyLocalPort() {
+        given().header("Origin", "http://localhost:5175").when().get("/demo-data")
+                .then().statusCode(200).header("Access-Control-Allow-Origin", "http://localhost:5175");
+    }
+
+    @Test
+    void doesNotAllowRemoteOrigins() {
+        given().header("Origin", "https://evil.example").when().get("/demo-data")
+                .then().header("Access-Control-Allow-Origin", org.hamcrest.Matchers.nullValue());
+    }
+
+    @Test
     void rejectsSolveWithoutBody() {
         given().contentType("application/json").when().post("/schedules?preset=health-first")
                 .then().statusCode(400);

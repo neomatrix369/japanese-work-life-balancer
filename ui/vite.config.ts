@@ -1,8 +1,9 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
+import { ttsPlugin } from './tts-plugin'; // POST /tts — server-side voice narration (key stays server-side)
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), ttsPlugin()],
   server: {
     port: 5173,
     proxy: {

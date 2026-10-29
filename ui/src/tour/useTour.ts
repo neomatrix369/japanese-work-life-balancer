@@ -16,6 +16,8 @@ import {
   type RunSpec,
 } from './runs';
 import { TOUR_STEPS, dwellMs, stepRunKey, type TourStep } from './steps';
+import { SPEECH_TAIL_MS, useTourVoice, type TourVoice } from './useTourVoice'; // voice narration
+import { SILENT_NARRATOR, type Narrator } from './voice';
 
 export interface TourController {
   /** start a real solve; resolves with the final response, rejects on failure/stop */
@@ -50,11 +52,18 @@ export interface Tour {
   back: () => void;
   togglePause: () => void;
   exit: () => void;
+  /** voice narration: mute toggle + "browser voice" note */
+  voice: TourVoice;
 }
 
 const PLAY_BUTTON_SELECTOR = '[data-tour="play"]';
 
-export function useTour(controller: TourController, view: TourView, steps: TourStep[] = TOUR_STEPS): Tour {
+export function useTour(
+  controller: TourController,
+  view: TourView,
+  steps: TourStep[] = TOUR_STEPS,
+  narrator: Narrator = SILENT_NARRATOR,
+): Tour {
   const ctrlRef = useRef(controller);
   ctrlRef.current = controller;
 
@@ -74,11 +83,14 @@ export function useTour(controller: TourController, view: TourView, steps: TourS
 
   const step = steps[index];
   const isLast = index === steps.length - 1;
-  const text = step.text({ current: view.current, results, currency: view.currency, running, teamSize });
+  const ctx = { current: view.current, results, currency: view.currency, running, teamSize };
+  const text = step.text(ctx);
   const textRef = useRef(text);
   textRef.current = text;
   const runKey = stepRunKey(step);
   const recorded = !!(runKey && recordedKeys[runKey]);
+  // Declared before auto-advance so its speech is queued before the dwell waits on it.
+  const voice = useTourVoice(narrator, { active, index, paused, steps, ctx });
 
   // ── Step entry: run the step's action ─────────────────────────────────────
   useEffect(() => {
@@ -184,6 +196,7 @@ export function useTour(controller: TourController, view: TourView, steps: TourS
   }, [leaveStep]);
 
   const start = useCallback(() => {
+    narrator.unlock(); // inside the Play click: lets the browser play narration later
     tokenRef.current++;
     setResults({});
     setRecordedKeys({});
@@ -194,7 +207,7 @@ export function useTour(controller: TourController, view: TourView, steps: TourS
     loadRecording('cost')
       .then((r) => setTeamSize(r.final.schedule.employees.length))
       .catch(() => setTeamSize(null));
-  }, []);
+  }, [narrator]);
 
   const exit = useCallback(() => {
     leaveStep();
@@ -208,12 +221,20 @@ export function useTour(controller: TourController, view: TourView, steps: TourS
 
   const togglePause = useCallback(() => setPaused((p) => !p), []);
 
-  // ── Auto-advance ──────────────────────────────────────────────────────────
+  // ── Auto-advance: after the dwell AND after the spoken line (+ a short tail) ──
   useEffect(() => {
     if (!active || paused || running || isLast) return;
-    const t = setTimeout(next, dwellMs(textRef.current));
-    return () => clearTimeout(t);
-  }, [active, paused, running, isLast, index, next]);
+    const until = Date.now() + dwellMs(textRef.current);
+    let live = true;
+    let t: ReturnType<typeof setTimeout> | undefined;
+    void voice.spoken().then(() => {
+      if (live) t = setTimeout(next, Math.max(until - Date.now(), SPEECH_TAIL_MS));
+    });
+    return () => {
+      live = false;
+      clearTimeout(t);
+    };
+  }, [active, paused, running, isLast, index, next, voice.spoken]);
 
   // ── Keyboard: Space pause, ←/→ back/next, Esc exit ────────────────────────
   useEffect(() => {
@@ -255,5 +276,6 @@ export function useTour(controller: TourController, view: TourView, steps: TourS
     back,
     togglePause,
     exit,
+    voice,
   };
 }

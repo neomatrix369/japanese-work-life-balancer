@@ -12,7 +12,7 @@ export const KPI_HELP: Readonly<Record<string, string>> = {
   'Avg consecutive days':
     'Average of each employee’s longest run of back-to-back working days (including carry-in). Lower is healthier.',
   'Idle hours total':
-    'Hours people are available on days they come in but have no task — paid waiting time.',
+    'Hours people are available on days they come in but have no task: paid waiting time.',
   'Labor cost':
     'What we pay: each employee’s hourly rate × hours of assigned tasks.',
   'Revenue':
