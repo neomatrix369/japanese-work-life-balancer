@@ -77,6 +77,10 @@ public class WorkScheduleResource {
     @Produces(MediaType.TEXT_PLAIN)
     public String solve(WorkSchedule problem, @QueryParam("preset") String preset,
             @QueryParam("limitSeconds") Integer limitSeconds) {
+        if (problem == null) {
+            throw new BadRequestException(
+                    "Request body must be a WorkSchedule JSON; to solve a scenario by name use POST /schedules/scenario/{name}");
+        }
         return startSolving(problem, preset, limitSeconds);
     }
 
