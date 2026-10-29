@@ -11,6 +11,7 @@
  * unit-tested without a server; `ttsPlugin` only wires it to Node's req/res.
  */
 import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import type { Plugin } from 'vite';
@@ -222,6 +223,44 @@ function env(): Record<string, string | undefined> {
   return (globalThis as unknown as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {};
 }
 
+/** Parse KEY=VALUE lines; handles `#` comments and single/double-quoted values. */
+export function parseDotEnv(text: string): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const raw of text.split('\n')) {
+    const line = raw.trim();
+    if (!line || line.startsWith('#')) continue;
+    const eq = line.indexOf('=');
+    if (eq < 1) continue;
+    const key = line.slice(0, eq).trim();
+    if (!key) continue;
+    let val = line.slice(eq + 1).trim();
+    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+      val = val.slice(1, -1);
+    } else {
+      const comment = val.indexOf(' #');
+      if (comment >= 0) val = val.slice(0, comment).trim();
+    }
+    out[key] = val;
+  }
+  return out;
+}
+
+/**
+ * Load .env then .env.local from `root` — .env.local wins on conflict.
+ * Shell process.env takes priority over both; this is only the file fallback.
+ */
+function loadFileEnv(root: string): Record<string, string> {
+  const merged: Record<string, string> = {};
+  for (const name of ['.env', '.env.local']) {
+    try {
+      Object.assign(merged, parseDotEnv(readFileSync(join(root, name), 'utf8')));
+    } catch {
+      // file absent — skip
+    }
+  }
+  return merged;
+}
+
 /** Vite plugin: `POST /tts` on the dev and preview servers. Reads the key per request. */
 export function ttsPlugin(): Plugin {
   const install = (server: {
@@ -229,8 +268,10 @@ export function ttsPlugin(): Plugin {
     middlewares: { use: (route: string, fn: never) => void };
   }) => {
     const e = env();
-    const voiceId = e.ELEVENLABS_VOICE_ID || DEFAULT_VOICE_ID;
-    const modelId = e.ELEVENLABS_MODEL_ID || DEFAULT_MODEL_ID;
+    const fileEnv = loadFileEnv(server.config.root);
+    // Priority: shell env → .env.local → .env → built-in default
+    const voiceId = e.ELEVENLABS_VOICE_ID ?? fileEnv.ELEVENLABS_VOICE_ID ?? DEFAULT_VOICE_ID;
+    const modelId = e.ELEVENLABS_MODEL_ID ?? fileEnv.ELEVENLABS_MODEL_ID ?? DEFAULT_MODEL_ID;
     const deps: TtsDeps = {
       fetch: (globalThis as unknown as { fetch: FetchLike }).fetch,
       cache: diskCache(resolve(server.config.root, '.tts-cache')),
@@ -248,7 +289,7 @@ export function ttsPlugin(): Plugin {
         send(res, json(405, { error: 'method_not_allowed' }));
         return;
       }
-      const apiKey = env().ELEVENLABS_API_KEY;
+      const apiKey = env().ELEVENLABS_API_KEY ?? fileEnv.ELEVENLABS_API_KEY;
       if (!handler || handlerKey !== apiKey) {
         handler = createTtsHandler({ apiKey, voiceId, modelId }, deps);
         handlerKey = apiKey;

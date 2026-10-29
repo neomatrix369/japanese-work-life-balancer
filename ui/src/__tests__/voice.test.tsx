@@ -83,8 +83,15 @@ function narratorWith(fetchImpl: NarratorDeps['fetch'], extra: Partial<NarratorD
   const speech = fakeSpeech();
   const audio = fakeAudio();
   const storage = memoryStorage();
+  // Route GET /tts (voiceId init) to a silent no-op so the spy only sees POST calls.
+  const fetch: NarratorDeps['fetch'] = fetchImpl
+    ? (url, init) =>
+        (init as RequestInit & { method?: string }).method === 'GET'
+          ? Promise.resolve({ ok: false, headers: new Headers(), blob: async () => new Blob() })
+          : fetchImpl(url, init)
+    : null;
   const narrator = createNarrator({
-    fetch: fetchImpl,
+    fetch,
     createAudio: () => audio,
     speech,
     makeUtterance: (text) =>
@@ -297,6 +304,7 @@ function controllableNarrator() {
     isMuted: () => muted,
     unlock: vi.fn(),
     voice: () => 'browser',
+    voiceId: () => null,
     subscribe: () => () => undefined,
   };
   return { narrator, finishLine: () => finish?.() };
@@ -372,7 +380,7 @@ describe('TourOverlay voice control', () => {
      */
     // -- Given --
     const toggleMute = vi.fn();
-    const voice = { muted: false, toggleMute, browserVoice: true, spoken: () => Promise.resolve() };
+    const voice = { muted: false, toggleMute, browserVoice: true, voiceId: null, spoken: () => Promise.resolve() };
     render(
       <TourOverlay
         target={null}
