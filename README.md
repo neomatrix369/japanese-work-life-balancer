@@ -156,7 +156,7 @@ on your `PATH`. More toolchain traps are in [maintaining.md](docs/maintaining.md
 **Optional services** (each has a free option and a fallback, so the app runs without them):
 
 - **ElevenLabs** — the premium narrator voice for the tour. Needs an API key in `ui/.env.local`.
-- **Timefold Enterprise** — exact match counts in *Broken constraints*. Needs a license and `make model ENTERPRISE=1`;
+- **Timefold Enterprise** — exact match counts in *Broken constraints*. Needs a license and `make demo ENTERPRISE=1`;
   a license has no effect on the default Community build.
 
 Step-by-step account, key, voice and license setup, with links: **[docs/external-services.md](docs/external-services.md)**.
@@ -464,7 +464,7 @@ If `make setup` says Maven is too old, an older `mvn` is probably earlier on you
 newer one:
 ```bash
 make setup MVN=/opt/homebrew/bin/mvn
-make model MVN=/opt/homebrew/bin/mvn
+make demo  MVN=/opt/homebrew/bin/mvn    # same for make model / make test
 ```
 
 </details>
@@ -506,7 +506,7 @@ make mcp
 <summary><code>make setup</code> says no Timefold license was found</summary>
 
 That's fine: the default Community edition needs no license, and a license has no effect on it. A license only
-matters for the Enterprise build (`make model ENTERPRISE=1`), which fills in the match counts under
+matters for the Enterprise build (`make demo ENTERPRISE=1`), which fills in the match counts under
 *Broken constraints*. Where to get one and where to put it:
 [docs/external-services.md → Timefold](docs/external-services.md#timefold-solver-community-or-enterprise).
 

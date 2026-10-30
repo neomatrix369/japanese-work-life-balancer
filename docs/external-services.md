@@ -153,12 +153,12 @@ export JAVA_HOME=$(/usr/libexec/java_home -v 21)
 3. **Run the Enterprise build:**
 
    ```bash
-   make model ENTERPRISE=1        # same as: cd model && mvn -Denterprise quarkus:dev
+   make demo ENTERPRISE=1         # whole stack; or just the model: make model ENTERPRISE=1
    ```
 
    This turns on the `enterprise` Maven profile, which swaps in the `ai.timefold.solver.enterprise` artifacts. They
-   come from Maven Central, so no extra Maven repository or credentials are needed. `make demo` always uses
-   Community; to demo Enterprise, run `make model ENTERPRISE=1`, `make ui` and `make mcp` in three terminals.
+   come from Maven Central, so no extra Maven repository or credentials are needed. The same flag works for the
+   whole stack: `make demo ENTERPRISE=1`.
 4. **Check it worked:** solve any scenario; the **Broken constraints** match counts now show numbers instead of "–".
 
 > Once a licence expires, Timefold Solver Enterprise **refuses to start** — there is no grace period. Drop

@@ -36,7 +36,7 @@ help:
 	@printf '  make model JAVA_HOME=/opt/homebrew/opt/openjdk@21\n'
 	@printf '  make model MVN=/usr/local/bin/mvn\n'
 	@printf '  make mcp MODEL_URL=http://localhost:8083\n'
-	@printf '  make model ENTERPRISE=1   Timefold Enterprise (needs a license)\n'
+	@printf '  make demo ENTERPRISE=1    Timefold Enterprise (needs a license)\n'
 	@printf '\nTour voice (optional): ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID, ELEVENLABS_MODEL_ID\n'
 	@printf '  put them in ui/.env.local — see docs/external-services.md\n\n'
 
@@ -93,7 +93,7 @@ setup:
 	[ -z "$$_lic" ] && [ -f "$$HOME/timefold-license.pem" ] && _lic="$$HOME/timefold-license.pem"; \
 	if [ -n "$$_lic" ]; then \
 	  echo "  Timefold license: found in $$_lic"; \
-	  echo "           Only used by the Enterprise build:  make model ENTERPRISE=1"; \
+	  echo "           Only used by the Enterprise build:  make demo ENTERPRISE=1"; \
 	else \
 	  echo "  Note: no Timefold license found — fine, the default Community edition needs none."; \
 	  echo "        (Broken-constraints match counts show '-' in the UI.)"; \
