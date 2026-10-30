@@ -200,7 +200,7 @@ export const TOUR_STEPS: TourStep[] = [
   },
   {
     id: ‘wrap’,
-    title: ‘That’s the idea’,
+    title: "That’s the idea",
     target: null,
     text: () =>
       ‘Hard rules are never broken. Health comes before cost, and the cost is visible, in yen and pounds, before anyone signs off the week.’,
