@@ -9,6 +9,8 @@ data-gen/out/
 timefold-license.pem
 *.pem
 .env
+.env.local
+.env.*.local
 .omc/
 **/.pytest_cache/
 .logs/

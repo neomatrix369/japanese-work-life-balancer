@@ -14,6 +14,16 @@ export function VoiceToggle({ voice }: { voice: TourVoice }) {
       >
         {voice.muted ? '🔇' : '🔊'}
       </button>
+      {!voice.muted && voice.voiceId && !voice.browserVoice && (
+        <span
+          className="tour-voice-note"
+          title={`Click to copy voice ID: ${voice.voiceId}`}
+          style={{ alignSelf: 'center', fontSize: 10, color: 'var(--fg-muted, #64748b)', fontFamily: 'monospace', cursor: 'pointer' }}
+          onClick={() => navigator.clipboard?.writeText(voice.voiceId!)}
+        >
+          {voice.voiceId}
+        </span>
+      )}
       {voice.browserVoice && (
         <span
           className="tour-voice-note"

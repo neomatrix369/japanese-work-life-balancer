@@ -12,6 +12,8 @@ export interface TourVoice {
   toggleMute: () => void;
   /** true when the line was read by the browser's own voice (premium voice unavailable) */
   browserVoice: boolean;
+  /** ElevenLabs voice ID the server is using (null while loading or when unavailable) */
+  voiceId: string | null;
   /** resolves when the current step's line has been spoken (or skipped / stopped) */
   spoken: () => Promise<void>;
 }
@@ -60,8 +62,12 @@ export function useTourVoice(narrator: Narrator, { active, index, paused, steps,
   const saidRef = useRef<{ index: number; line: string; running: boolean } | null>(null);
   const [muted, setMuted] = useState(() => narrator.isMuted());
   const [kind, setKind] = useState(() => narrator.voice());
+  const [voiceId, setVoiceId] = useState(() => narrator.voiceId());
 
-  useEffect(() => narrator.subscribe(() => setKind(narrator.voice())), [narrator]);
+  useEffect(() => narrator.subscribe(() => {
+    setKind(narrator.voice());
+    setVoiceId(narrator.voiceId());
+  }), [narrator]);
 
   // Speak on step entry, and say the rest once a solve settles.
   useEffect(() => {
@@ -119,5 +125,5 @@ export function useTourVoice(narrator: Narrator, { active, index, paused, steps,
 
   const spoken = useCallback(() => speechRef.current, []);
 
-  return { muted, toggleMute, browserVoice: kind === 'browser' && !muted, spoken };
+  return { muted, toggleMute, browserVoice: kind === 'browser' && !muted, voiceId, spoken };
 }

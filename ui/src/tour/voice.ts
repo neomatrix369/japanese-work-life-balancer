@@ -23,6 +23,8 @@ export interface Narrator {
   unlock(): void;
   /** which voice spoke the latest line */
   voice(): VoiceKind;
+  /** ElevenLabs voice ID actually in use on the server (null until fetched or when unavailable) */
+  voiceId(): string | null;
   /** notified when `voice()` changes; returns an unsubscribe */
   subscribe(fn: () => void): () => void;
 }
@@ -38,6 +40,7 @@ export const SILENT_NARRATOR: Narrator = {
   isMuted: () => true,
   unlock: () => undefined,
   voice: () => 'none',
+  voiceId: () => null,
   subscribe: () => () => undefined,
 };
 
@@ -188,8 +191,27 @@ export function createNarrator(overrides: Partial<NarratorDeps> = {}): Narrator 
   let audioPlaying = false;
   let kind: VoiceKind = 'none';
   let serverOffUntil = 0;
+  let activeVoiceId: string | null = null;
   const urls = new Map<string, Promise<string | null>>();
   const listeners = new Set<() => void>();
+
+  // Fetch the server's active voice config once on init for display in the UI.
+  if (d.fetch) {
+    void (d.fetch as (url: string, init: RequestInit) => Promise<{ ok: boolean; json?: () => Promise<unknown> }>)(
+      '/tts', { method: 'GET', headers: { Accept: 'application/json' } }
+    ).then((r) => {
+      if (r.ok && r.json) return r.json();
+      return null;
+    }).then((body) => {
+      if (body && typeof body === 'object' && 'voiceId' in body) {
+        activeVoiceId = (body as { voiceId: string }).voiceId;
+        // Server is reachable and config may have changed (e.g. new API key in .env.local) —
+        // clear any stale backoff so the next POST actually tries.
+        serverOffUntil = 0;
+        listeners.forEach((fn) => fn());
+      }
+    }).catch(() => undefined);
+  }
 
   const setKind = (k: VoiceKind) => {
     if (k === kind) return;
@@ -353,6 +375,7 @@ export function createNarrator(overrides: Partial<NarratorDeps> = {}): Narrator 
       }
     },
     voice: () => kind,
+    voiceId: () => activeVoiceId,
     subscribe(fn) {
       listeners.add(fn);
       return () => listeners.delete(fn);
