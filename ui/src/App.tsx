@@ -28,6 +28,7 @@ import { LongevityView } from './components/LongevityView';
 import { ReplayBar } from './components/ReplayBar';
 import { CollapsiblePanel } from './components/CollapsiblePanel';
 import { TourOverlay } from './components/TourOverlay';
+import { AboutModal } from './components/AboutModal';
 import { useTour, type TourController } from './tour/useTour';
 import { createNarrator } from './tour/voice';
 import { weekDates } from './tour/narrate';
@@ -64,6 +65,7 @@ export function App() {
   const [savedRun, setSavedRun] = useState<SavedRun | null>(null);
   const [currency, setCurrency] = useState<Currency>('JPY');
   const [role, setRole] = useState<Role>('Manager');
+  const [showAbout, setShowAbout] = useState(false);
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   /** Settles the promise returned by runSolve (used by the guided tour). */
@@ -318,6 +320,7 @@ export function App() {
         onRoleChange={setRole}
         onPlayTour={tour.start}
         tourActive={tour.active}
+        onAbout={() => setShowAbout(true)}
         solving={solving}
         canSolve={!!selectedScenario && !modelDown}
         onSolve={handleSolve}
@@ -500,6 +503,9 @@ export function App() {
           currency={currency}
         />
       )}
+
+      {/* About modal */}
+      {showAbout && <AboutModal onClose={() => setShowAbout(false)} />}
 
       {/* Guided tour */}
       {tour.active && (

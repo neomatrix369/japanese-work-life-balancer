@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Preset, SolverStatus } from '../api';
 import type { Currency, Role } from '../types';
-import { Flower2, Play, Square } from 'lucide-react';
+import { Flower2, Info, Play, Square } from 'lucide-react';
 import { ThemeControl } from './ThemeControl';
 
 interface TopBarProps {
@@ -25,6 +25,7 @@ interface TopBarProps {
   /** start the guided "Play demo" tour */
   onPlayTour?: () => void;
   tourActive?: boolean;
+  onAbout?: () => void;
 }
 
 export function TopBar({
@@ -45,6 +46,7 @@ export function TopBar({
   onStop,
   onPlayTour,
   tourActive = false,
+  onAbout,
 }: TopBarProps) {
   return (
     <div className="topbar" data-tour="controls">
@@ -53,6 +55,16 @@ export function TopBar({
         Work-Life Balancer
       </span>
       <ThemeControl />
+      {onAbout && (
+        <button
+          className="btn-about"
+          onClick={onAbout}
+          title="How the system works — constraints, formulas and KPIs explained"
+        >
+          <Info size={13} aria-hidden="true" />
+          About
+        </button>
+      )}
       {onPlayTour && (
         <button
           className="btn btn-tour"
