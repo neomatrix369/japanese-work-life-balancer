@@ -37,7 +37,7 @@ The main flow: pick a scenario and preset, solve, then compare the cheap plan wi
 
 ### Compare runs — what health protection costs
 
-![Compare panel: health-first protects 7 more people than cost-first for about 99,600 yen more labor cost](02-dashboard/04-compare-runs.png)
+![Compare panel: health-first puts 10 fewer people at risk than cost-first for about 58,500 yen more labor cost](02-dashboard/04-compare-runs.png)
 
 ### Solver replay — how the plan improved step by step
 

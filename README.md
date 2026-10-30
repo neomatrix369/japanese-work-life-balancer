@@ -14,10 +14,10 @@ between the two is the monetary value of protecting your staff.
 <p align="center">
   <a href="docs/screenshots/02-dashboard/04-compare-runs.png">
     <img src="docs/screenshots/02-dashboard/04-compare-runs.png" width="90%"
-         alt="Compare runs: health-first protects 7 more people than cost-first for about 99,600 yen more labor cost">
+         alt="Compare runs: health-first puts 10 fewer people at risk than cost-first for about 58,500 yen more labor cost">
   </a>
   <br>
-  <sub>Same <code>burnout</code> week, two plans: <b>health-first</b> puts 7 fewer people at risk for ~¥100k more payroll.</sub>
+  <sub>Same <code>burnout</code> week, two plans: <b>health-first</b> puts 10 fewer people at risk for ~¥59k more payroll.</sub>
 </p>
 
 ## Contents
@@ -514,6 +514,25 @@ The default is 30 seconds; the maximum accepted value is 60.
 
 Built at Hack for Humanity London 2026-10-29 by Mani Sarkar ([@neomatrix369](https://github.com/neomatrix369))
 in collaboration with Risako ([@inforisako](https://github.com/inforisako)).
+
+**The idea came from Risako.** She was instrumental in framing the problem: work-life balance in Japan, how
+long hours and long runs of working days harm people's health, and how at the extreme they lead to
+**karoshi** (過労死, "death from overwork"). Her synopsis became the brief for this build:
+
+> Managers, HR staff and executives in Japanese companies want an AI-assisted weekly plan that prevents
+> overwork. Employee health and safety come before labor cost and profit: the company accepts lower profit
+> for a healthier workforce, and health and profit are reported side by side so the trade-off stays visible.
+> The long-term aim is longevity — people stay for many years instead of falling ill, coming in less often
+> or retiring early.
+
+The product material behind the build lives in [`docs/plan/`](docs/plan/):
+
+| Document | What it holds |
+|---|---|
+| [`work-scheduling-prd.md`](docs/plan/work-scheduling-prd.md) | The PRD: problem summary, planning entities, constraints, KPIs and users |
+| [`clarifying-questions.md`](docs/plan/clarifying-questions.md) | Open questions about the PRD and the answers we settled on |
+| [`claude-code-prompt.md`](docs/plan/claude-code-prompt.md) | The build spec, including the deliberate simplifications (it wins where it differs from the PRD) |
+| [`kickoff-prompt.md`](docs/plan/kickoff-prompt.md) | The phase-by-phase build plan with checkpoints |
 
 The model is derived from
 [TimefoldAI/timefold-quickstarts](https://github.com/TimefoldAI/timefold-quickstarts) (Apache-2.0),
