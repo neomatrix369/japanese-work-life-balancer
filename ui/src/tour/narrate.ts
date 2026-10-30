@@ -307,5 +307,5 @@ export function resultSentence(resp: ScheduleResponse, currency: Currency): stri
 export function longevitySentence(resp: ScheduleResponse): string {
   const l = resp.longevity;
   if (!l) return 'No longevity data in this run.';
-  return `Average tenure ${l.avgTenureYears.toFixed(1)} years, ${l.totalUnplannedAbsenceDays} unplanned absence days in 3 months, 1-year retention ${pct(l.retention?.year1 ?? 0)} (MOCK figures).`;
+  return `Average tenure ${l.avgTenureYears.toFixed(1)} years, ${l.totalUnplannedAbsenceDays} unplanned absence days in 3 months, ${l.retention ? `1-year retention ${pct(l.retention.year1)}` : 'no leaver history for retention'}.`;
 }

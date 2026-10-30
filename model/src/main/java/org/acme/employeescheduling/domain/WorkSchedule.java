@@ -29,7 +29,8 @@ public class WorkSchedule {
     @JsonFormat(pattern = "HH:mm")
     private LocalTime shiftEnd = LocalTime.of(17, 0);
     private List<LocalDate> publicHolidays = List.of();
-    private Retention retention;
+    // Null when the input has no leaver history; retention is then not reported.
+    private List<Leaver> leavers;
 
     @ProblemFactCollectionProperty
     @ValueRangeProvider
@@ -111,12 +112,12 @@ public class WorkSchedule {
         this.publicHolidays = publicHolidays;
     }
 
-    public Retention getRetention() {
-        return retention;
+    public List<Leaver> getLeavers() {
+        return leavers;
     }
 
-    public void setRetention(Retention retention) {
-        this.retention = retention;
+    public void setLeavers(List<Leaver> leavers) {
+        this.leavers = leavers;
     }
 
     public List<Employee> getEmployees() {

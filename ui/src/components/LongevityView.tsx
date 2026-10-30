@@ -62,7 +62,7 @@ export function LongevityView({ longevity, role, perEmployeeList }: LongevityVie
       {longevity.retention && (
         <>
           <div style={{ fontWeight: 600, fontSize: 12, color: 'var(--fg-muted)', marginBottom: 8 }}>
-            Retention rates (MOCK: company-reported figures)
+            Retention rates (from staff tenure and leaver history)
           </div>
           <div className="retention-grid">
             <div className="retention-card">

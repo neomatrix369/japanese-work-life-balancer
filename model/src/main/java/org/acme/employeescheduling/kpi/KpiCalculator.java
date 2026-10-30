@@ -185,7 +185,7 @@ public final class KpiCalculator {
                 round2(schedule.getEmployees().stream().mapToDouble(Employee::getTenureYears).average().orElse(0)),
                 totalAbsence,
                 employeeCount == 0 ? 0 : round2(totalAbsence / (double) employeeCount),
-                schedule.getRetention());
+                Retention.fromHistory(schedule.getEmployees(), schedule.getLeavers()));
 
         return new Result(kpis, perEmployee, shifts, longevity);
     }
