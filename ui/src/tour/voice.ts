@@ -205,6 +205,9 @@ export function createNarrator(overrides: Partial<NarratorDeps> = {}): Narrator 
     }).then((body) => {
       if (body && typeof body === 'object' && 'voiceId' in body) {
         activeVoiceId = (body as { voiceId: string }).voiceId;
+        // Server is reachable and config may have changed (e.g. new API key in .env.local) —
+        // clear any stale backoff so the next POST actually tries.
+        serverOffUntil = 0;
         listeners.forEach((fn) => fn());
       }
     }).catch(() => undefined);

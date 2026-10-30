@@ -272,6 +272,10 @@ export function ttsPlugin(): Plugin {
     // Priority: shell env → .env.local → .env → built-in default
     const voiceId = e.ELEVENLABS_VOICE_ID ?? fileEnv.ELEVENLABS_VOICE_ID ?? DEFAULT_VOICE_ID;
     const modelId = e.ELEVENLABS_MODEL_ID ?? fileEnv.ELEVENLABS_MODEL_ID ?? DEFAULT_MODEL_ID;
+    const hasKey = !!(e.ELEVENLABS_API_KEY ?? fileEnv.ELEVENLABS_API_KEY);
+    server.config.logger.warn(
+      `[tts] voice=${voiceId} model=${modelId} apiKey=${hasKey ? 'present' : 'MISSING — POST /tts will return 503'}`
+    );
     const deps: TtsDeps = {
       fetch: (globalThis as unknown as { fetch: FetchLike }).fetch,
       cache: diskCache(resolve(server.config.root, '.tts-cache')),
