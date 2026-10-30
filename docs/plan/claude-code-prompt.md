@@ -5,7 +5,8 @@
 > `Consecutive days risk` constraint adds a per-person flat charge (`AT_RISK_PERSON_PENALTY = 2400`) in addition to
 > the per-day formula; scenarios were retuned for demonstrability (see README → Scenarios and "What is mocked").
 > Extra UI features beyond the spec: solver replay bar, guided "▶ Play demo" tour (19 steps), theme toggle,
-> plain-language KPI ⓘ tooltips, Compare runs as a collapsed `<details>` panel.
+> plain-language KPI ⓘ tooltips, Compare runs as a collapsed `<details>` panel, About modal (constraints,
+> KPIs, stack reference).  `make check` was split out from `setup` as a separate dry-run verification target.
 > → See [README.md](../../README.md#deviations) for full details.
 
 You are building a hackathon entry for **Hack for Humanity London (2026-10-29)** in the current directory:

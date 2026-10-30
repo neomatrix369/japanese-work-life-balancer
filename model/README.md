@@ -17,7 +17,12 @@ Override with `-Dapp.data-dir=...`.
 
 ### Licensed edition (optional)
 
-`mvn quarkus:dev -Denterprise` with `TIMEFOLD_LICENSE_PATH` pointing at your `.pem` (never commit it).
+`mvn quarkus:dev -Denterprise` (or `make model ENTERPRISE=1` from the root). The `enterprise` profile swaps in the
+`ai.timefold.solver.enterprise` artifacts from Maven Central; no extra repository is needed. Timefold finds the
+license itself via `TIMEFOLD_LICENSE_PATH` (absolute path), `TIMEFOLD_LICENSE` (the PEM **contents**) or
+`~/timefold-license.pem`. Never commit it. Without the profile the license is ignored. How to get one:
+[../docs/external-services.md](../docs/external-services.md#timefold-solver-community-or-enterprise).
+
 The only difference for this app: `brokenConstraints[].matchCount` is filled in. In Community Edition, Timefold's
 score analysis is a commercial feature, so broken constraints are computed by re-scoring once per constraint
 and `matchCount` is `null`.

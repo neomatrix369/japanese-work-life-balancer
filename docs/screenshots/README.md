@@ -65,6 +65,10 @@ Drill-downs: what each number means, one person's week, longevity data and an ov
 
 ![Broken constraints panel for the overloaded scenario: 0 hard, 143 unassigned tasks as medium penalties](03-details/09-overloaded-broken-constraints.png)
 
+### About modal — constraints, KPIs and stack reference
+
+![About modal listing all hard and soft constraints, KPI definitions and the technology stack](03-details/10-about-modal.png)
+
 ---
 
 ## 4. Themes and mobile

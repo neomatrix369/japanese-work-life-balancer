@@ -23,7 +23,8 @@ between the two is the monetary value of protecting your staff.
 ## Contents
 
 - [Quick start](#quick-start) · [Screenshots](#screenshots) · [Architecture](#architecture)
-- **Setup:** [Prerequisites](#prerequisites) · [Run services one at a time](#run-services-one-at-a-time)
+- **Setup:** [Prerequisites](#prerequisites) · [Run services one at a time](#run-services-one-at-a-time) ·
+  [External services (ElevenLabs, Timefold)](docs/external-services.md) · [Maintaining](docs/maintaining.md)
 - **Using the app:** [Guided tour](#guided-tour) · [Dashboard walkthrough](#dashboard-walkthrough) ·
   [Look and feel](#look-and-feel) · [Voice narration](#voice-narration-elevenlabs) · [Use it from Claude](#use-it-from-claude)
 - **Reference:** [REST API](#rest-api-quick-reference) · [How it plans](#how-it-plans) · [Scenarios](#scenarios) ·
@@ -36,12 +37,23 @@ between the two is the monetary value of protecting your staff.
 
 ## Quick start
 
+**Already have JDK 21+, Maven 3.9+, Node 20+ and Python 3.11+?** Three commands, about 3 minutes the first time:
+
 ```bash
-make setup   # checks tools, installs npm & Python deps
+make check   # verifies versions, free ports, optional services — installs nothing
+make setup   # runs check, then installs npm & Python deps (re-run after every git pull)
 make demo    # generates data, starts model + ui + mcp; Ctrl-C stops all
 ```
 
-Open **http://localhost:5173** in your browser, then click **▶ Play demo** for a hands-free narrated tour.
+Open **http://localhost:5173** in your browser, then click **▶ Play demo** for a hands-free narrated tour. The model
+needs ~20 s to start (about a minute the very first time, while Maven downloads libraries). If a check fails, it
+prints the fix.
+
+**Missing a tool, or starting on a fresh machine?** Follow [docs/install-tools.md](docs/install-tools.md):
+copy-paste installs for macOS and Linux (Ubuntu/Debian), then come back here.
+
+No accounts are needed: the solver runs on Timefold's free Community Edition and the tour uses your browser's
+voice. For the premium ElevenLabs narrator or Timefold Enterprise, see [external services](docs/external-services.md).
 
 ---
 
@@ -99,10 +111,16 @@ Open **http://localhost:5173** in your browser, then click **▶ Play demo** for
     </a>
     <sub><b>Phone</b> — 390 px wide</sub>
   </td>
+  <td align="center" width="25%">
+    <a href="docs/screenshots/03-details/10-about-modal.png">
+      <img src="docs/screenshots/03-details/10-about-modal.png" width="100%" alt="About modal showing constraints, KPIs and stack">
+    </a>
+    <sub><b>About</b> — constraints &amp; stack</sub>
+  </td>
 </tr>
 </table>
 
-> Full gallery (15 shots, with captions) → [docs/screenshots/](docs/screenshots/README.md)
+> Full gallery (16 shots, with captions) → [docs/screenshots/](docs/screenshots/README.md)
 
 ---
 
@@ -135,26 +153,32 @@ flowchart LR
 ## Prerequisites
 
 <details>
-<summary>JDK 21, Maven 3.9, Node 20, Python 3.11 — and an optional Timefold license</summary>
+<summary>JDK 21, Maven 3.9, Node 20, Python 3.11 — no accounts needed</summary>
 
-| Tool | Minimum | Check |
-|---|---|---|
-| JDK | 21 | `java -version` |
-| Maven | 3.9 | `mvn -version` |
-| Node.js | 20 | `node --version` |
-| Python | 3.11 | `python3 --version` |
-| uv | any (optional) | `uv --version` |
-| jq | any (optional, for curl one-liners) | `jq --version` |
+| Tool | Minimum | Check | Install (macOS) |
+|---|---|---|---|
+| JDK | 21 | `java -version` | `brew install openjdk@21` or [Temurin](https://adoptium.net/) |
+| Maven | 3.9 | `mvn -version` | `brew install maven` ([maven.apache.org](https://maven.apache.org/download.cgi)) |
+| Node.js | 20 | `node --version` | [nvm](https://github.com/nvm-sh/nvm) or [nodejs.org](https://nodejs.org/) |
+| Python | 3.11 | `python3 --version` | `brew install python@3.12` |
+| make, git, curl | any | `make --version` | `xcode-select --install` |
+| uv | any (optional) | `uv --version` | [docs.astral.sh/uv](https://docs.astral.sh/uv/getting-started/installation/) |
+| jq | any (optional, for curl one-liners) | `jq --version` | `brew install jq` |
 
-**Timefold license** — the solver runs in Community edition without a license file.
-If you have one, point to it via one of these (never commit the file):
+Linux (Ubuntu/Debian) and Windows (WSL) commands: [docs/install-tools.md](docs/install-tools.md).
 
-```
-export TIMEFOLD_LICENSE_PATH=/path/to/timefold-license.pem
-# or
-export TIMEFOLD_LICENSE=/path/to/timefold-license.pem
-# or drop it at ~/timefold-license.pem
-```
+Run **`make check`** to test all of them at once: it stops with a fix if one is missing or too old, including when
+an older Maven sits earlier on your `PATH`. Install commands for macOS and Linux:
+**[docs/install-tools.md](docs/install-tools.md)**. More toolchain traps are in
+[maintaining.md](docs/maintaining.md#toolchain-traps).
+
+**Optional services** (each has a free option and a fallback, so the app runs without them):
+
+- **ElevenLabs** — the premium narrator voice for the tour. Needs an API key in `ui/.env.local`.
+- **Timefold Enterprise** — exact match counts in *Broken constraints*. Needs a license and `make demo ENTERPRISE=1`;
+  a license has no effect on the default Community build.
+
+Step-by-step account, key, voice and license setup, with links: **[docs/external-services.md](docs/external-services.md)**.
 
 </details>
 
@@ -243,26 +267,28 @@ and only restyles existing classes, so visual changes never touch component mark
 The **▶ Play demo** tour reads each step aloud and waits for the line to finish before it moves on.
 Press **🔊/🔇** in the tour controls (or **M**) to mute. The app remembers your choice.
 
-**Environment variables.** These belong to *this app*, not to ElevenLabs. The Vite dev server reads
-them in `ui/tts-plugin.ts` when it handles each request.
+**Set-up in one minute.** Create an API key on the [ElevenLabs API keys page](https://elevenlabs.io/app/api/api-keys)
+with the **Text to Speech** permission, then put it in `ui/.env.local` (git-ignored) and restart `make demo`:
+
+```dotenv
+ELEVENLABS_API_KEY=sk_your_key_here
+```
+
+Account creation, key permissions, choosing a voice from the [Voice Library](https://elevenlabs.io/app/voice-library),
+quotas and error codes: **[docs/external-services.md → ElevenLabs](docs/external-services.md#elevenlabs-premium-tour-voice)**.
+
+**Settings.** These belong to *this app*, not to ElevenLabs. The Vite dev server in `ui/tts-plugin.ts` reads them
+from your shell first, then `ui/.env.local`, then `ui/.env`.
 
 | Variable | Needed? | Default | What it does |
 |---|---|---|---|
-| `ELEVENLABS_API_KEY` | Required for the premium voice | — | Key permissions: **Text to Speech** (required), **Voices: Read** (to browse or confirm voices), **Models: Read** and **User: Read** (optional) |
-| `ELEVENLABS_VOICE_ID` | Optional | `pFZP5JQG7iQjIQuC4Bku` ("Lily", a warm British female narrator) | Which voice reads the tour |
-| `ELEVENLABS_MODEL_ID` | Optional | `eleven_multilingual_v2` | Speech model (it says Japanese names well) |
+| `ELEVENLABS_API_KEY` | Required for the premium voice | — | Read on every request, so a new key works without a restart |
+| `ELEVENLABS_VOICE_ID` | Optional | `pFZP5JQG7iQjIQuC4Bku` ("Lily", a warm British narrator) | Which voice reads the tour. **Read once at start-up — restart after changing it** |
+| `ELEVENLABS_MODEL_ID` | Optional | `eleven_multilingual_v2` | Speech model (it says Japanese names well). Read once at start-up |
 
-**Find a voice ID.**
-- In the dashboard, open **Voices** (or the **Voice Library**), open the voice's **⋯** menu, then
-  choose **Copy voice ID**. You must add a Library voice to **My Voices** before you can use it. A
-  Japanese-accented English voice from the Library works well for this app.
-- From the API (needs **Voices: Read**):
-  `curl -s -H "xi-api-key: $ELEVENLABS_API_KEY" https://api.elevenlabs.io/v1/voices | jq '.voices[] | {name, voice_id}'`
-
-**Apply it.** Add `export ELEVENLABS_VOICE_ID=<id>` to `~/.zshrc`, or set it for one run with
-`ELEVENLABS_VOICE_ID=<id> make demo`. Then restart `make demo`. Audio is cached in `ui/.tts-cache/`
-(git-ignored). The cache key includes the voice, so switching voices never replays old audio. Delete
-that folder to free space.
+Check what the server is using: `curl -s localhost:5173/tts` prints the voice and model, and `.logs/ui.log` shows
+`apiKey=present` or `MISSING`. Spoken lines are cached in `ui/.tts-cache/` (git-ignored), keyed by voice and text,
+so fixed lines replay for free and switching voices never replays old audio.
 
 **Without a working key.** If `/tts` fails or takes more than 4 s, your browser's own British voice
 reads the tour, and the tour controls show a small "browser voice" note. The tour keeps running either way.
@@ -277,7 +303,8 @@ only the server calls ElevenLabs. The key is not in the built bundle.
 <details>
 <summary>Register the MCP server, 7 tools, example prompts</summary>
 
-Register the MCP server (the model must be running):
+You need [Claude Code](https://docs.claude.com/en/docs/claude-code/overview) or another
+[MCP](https://modelcontextprotocol.io/) client. Register the MCP server (the model must be running):
 
 ```bash
 claude mcp add --transport http jwlb http://localhost:8765/mcp
@@ -449,9 +476,14 @@ On macOS with multiple JDKs, point Maven at Java 21:
 export JAVA_HOME=$(/usr/libexec/java_home -v 21)
 make model   # or: make model JAVA_HOME=$(/usr/libexec/java_home -v 21)
 ```
-Override Maven itself:
+`java_home` only sees JDKs in `/Library/Java/JavaVirtualMachines`. A JDK that IntelliJ downloaded lives in `~/.jdks/`;
+pass it directly: `make model JAVA_HOME=$HOME/.jdks/<jdk-21-folder>/Contents/Home`.
+
+If `make setup` says Maven is too old, an older `mvn` is probably earlier on your `PATH` (it lists them). Use the
+newer one:
 ```bash
-make model MVN=/usr/local/bin/mvn
+make setup MVN=/opt/homebrew/bin/mvn
+make demo  MVN=/opt/homebrew/bin/mvn    # same for make model / make test
 ```
 
 </details>
@@ -490,10 +522,21 @@ make mcp
 </details>
 
 <details>
-<summary><code>make setup</code> warns about no license file</summary>
+<summary><code>make setup</code> says no Timefold license was found</summary>
 
-This is a warning, not a failure. The solver runs in Community edition. If you have a Timefold hackathon license,
-set `TIMEFOLD_LICENSE_PATH` as described in [Prerequisites](#prerequisites).
+That's fine: the default Community edition needs no license, and a license has no effect on it. A license only
+matters for the Enterprise build (`make demo ENTERPRISE=1`), which fills in the match counts under
+*Broken constraints*. Where to get one and where to put it:
+[docs/external-services.md → Timefold](docs/external-services.md#timefold-solver-community-or-enterprise).
+
+</details>
+
+<details>
+<summary>The tour uses the browser voice, or the wrong ElevenLabs voice</summary>
+
+Check `.logs/ui.log` for `apiKey=present` and run `curl -s localhost:5173/tts` to see the active voice. After changing
+`ELEVENLABS_VOICE_ID`, restart `make demo`, and make sure an `export` in your shell isn't overriding `ui/.env.local`.
+Error codes and fixes: [ElevenLabs troubleshooting](docs/external-services.md#troubleshooting-elevenlabs).
 
 </details>
 
