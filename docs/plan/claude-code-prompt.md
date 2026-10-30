@@ -112,7 +112,7 @@ Helpers (`@JsonIgnore`): `end()`, `date()`, `dayIndex(LocalDate weekStart)`, `ov
 | `weekStart` | LocalDate (a Monday); the plan covers 7 days |
 | `shiftStart`, `shiftEnd` | `09:00`, `17:00` |
 | `publicHolidays` | `List<LocalDate>` |
-| `retention` | `{ year1, year3, year5 }` doubles, report only |
+| `leavers` | `[{ id, leftAfterYears }]`, report only; drives computed `retention` |
 | `employees` | `@ProblemFactCollectionProperty @ValueRangeProvider` |
 | `tasks` | `@PlanningEntityCollectionProperty` |
 | `score` | `@PlanningScore`, long-based HardMediumSoft (`HardMediumSoftLongScore`, or `HardMediumSoftScore` if the pinned version renamed it) |
@@ -270,7 +270,8 @@ staff) and per skill, so `normal.json` doesn't produce unassigned tasks by accid
 - **Preferences:** 0–2 `daysOffRequested`; 20% have one `avoidHours` window (e.g. 15:00–17:00 on one day).
 - **History:** `consecutiveDaysBeforeWeek` 0–2 normally (burnout: see table). `holidayDaysRemaining` 0–20.
   `tenureYears` 0–25 (one decimal). `unplannedAbsenceDays3m` 0–6, mildly higher for people with long carry-in runs.
-- **Retention:** `{ "year1": 0.88, "year3": 0.74, "year5": 0.63 }` (MOCK: invented company figures).
+- **Leavers:** `[{ "id": "L-001", "leftAfterYears": 0.4 }, …]`, half the headcount. Early leavers rise with the share of staff
+  on 3+ day carry-in streaks. The model computes Kaplan–Meier `retention` (year 1/3/5) from these plus current `tenureYears`.
 - **Tasks:** start on a 15-minute grid, fully inside 09:00–17:00; duration 30–480 in 15-minute steps, skewed short
   (most 30–180). ~85% on weekdays, ~15% on weekends. Names from per-skill templates
   (e.g. accounting: "Invoice reconciliation", "Expense review"; it-support: "Laptop setup", "VPN ticket").
@@ -385,7 +386,7 @@ and report the numbers you'd quote.
 - Added a soft `Consecutive days risk` constraint (the PRD reported health only); `cost-first` reproduces the PRD's
   "report only" behaviour.
 - Soft penalties use normalized units (minutes, ¥100) so equal weights are meaningful.
-- No persistence, no auth, fixed FX rates, invented retention figures (all marked `MOCK:`).
+- No persistence, no auth, fixed FX rates (all marked `MOCK:`).
 
 ## Cut order if time runs short
 
