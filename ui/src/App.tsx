@@ -505,7 +505,12 @@ export function App() {
       )}
 
       {/* About modal */}
-      {showAbout && <AboutModal onClose={() => setShowAbout(false)} />}
+      {(showAbout || (tour.active && !!tour.step.openAbout)) && (
+        <AboutModal onClose={() => {
+          setShowAbout(false);
+          if (tour.active && tour.step.openAbout) tour.next();
+        }} />
+      )}
 
       {/* Guided tour */}
       {tour.active && (

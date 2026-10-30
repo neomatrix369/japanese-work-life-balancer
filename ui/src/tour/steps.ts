@@ -55,6 +55,8 @@ export interface TourStep {
   role?: Role;
   /** week-grid column (0 = Monday) to highlight */
   highlightDay?: number;
+  /** open the About modal for this step */
+  openAbout?: boolean;
   text: (ctx: NarrationCtx) => string;
 }
 
@@ -189,11 +191,19 @@ export const TOUR_STEPS: TourStep[] = [
     ),
   },
   {
-    id: 'wrap',
-    title: 'That’s the idea',
+    id: ‘about’,
+    title: ‘How it works — open any time’,
+    target: null,
+    openAbout: true,
+    text: () =>
+      ‘Every number you just saw came from a real formula. This page documents each constraint, the penalty maths, and every KPI — labor cost, idle time, the consecutive-days health rule, and the preset weights. Hit the ⓘ button in the toolbar to open it any time.’,
+  },
+  {
+    id: ‘wrap’,
+    title: ‘That’s the idea’,
     target: null,
     text: () =>
-      'Hard rules are never broken. Health comes before cost, and the cost is visible, in yen and pounds, before anyone signs off the week.',
+      ‘Hard rules are never broken. Health comes before cost, and the cost is visible, in yen and pounds, before anyone signs off the week.’,
   },
 ];
 
