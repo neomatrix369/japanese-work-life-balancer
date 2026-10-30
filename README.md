@@ -37,12 +37,20 @@ between the two is the monetary value of protecting your staff.
 
 ## Quick start
 
+**Already have JDK 21+, Maven 3.9+, Node 20+ and Python 3.11+?** Three commands, about 3 minutes the first time:
+
 ```bash
-make setup   # checks tools, installs npm & Python deps
+make check   # verifies versions, free ports, optional services — installs nothing
+make setup   # runs check, then installs npm & Python deps (re-run after every git pull)
 make demo    # generates data, starts model + ui + mcp; Ctrl-C stops all
 ```
 
-Open **http://localhost:5173** in your browser, then click **▶ Play demo** for a hands-free narrated tour.
+Open **http://localhost:5173** in your browser, then click **▶ Play demo** for a hands-free narrated tour. The model
+needs ~20 s to start (about a minute the very first time, while Maven downloads libraries). If a check fails, it
+prints the fix.
+
+**Missing a tool, or starting on a fresh machine?** Follow [docs/install-tools.md](docs/install-tools.md):
+copy-paste installs for macOS and Linux (Ubuntu/Debian), then come back here.
 
 No accounts are needed: the solver runs on Timefold's free Community Edition and the tour uses your browser's
 voice. For the premium ElevenLabs narrator or Timefold Enterprise, see [external services](docs/external-services.md).
@@ -147,11 +155,16 @@ flowchart LR
 | Maven | 3.9 | `mvn -version` | `brew install maven` ([maven.apache.org](https://maven.apache.org/download.cgi)) |
 | Node.js | 20 | `node --version` | [nvm](https://github.com/nvm-sh/nvm) or [nodejs.org](https://nodejs.org/) |
 | Python | 3.11 | `python3 --version` | `brew install python@3.12` |
+| make, git, curl | any | `make --version` | `xcode-select --install` |
 | uv | any (optional) | `uv --version` | [docs.astral.sh/uv](https://docs.astral.sh/uv/getting-started/installation/) |
 | jq | any (optional, for curl one-liners) | `jq --version` | `brew install jq` |
 
-`make setup` checks every version and stops with a fix if one is too old, including when an older Maven sits earlier
-on your `PATH`. More toolchain traps are in [maintaining.md](docs/maintaining.md#toolchain-traps).
+Linux (Ubuntu/Debian) and Windows (WSL) commands: [docs/install-tools.md](docs/install-tools.md).
+
+Run **`make check`** to test all of them at once: it stops with a fix if one is missing or too old, including when
+an older Maven sits earlier on your `PATH`. Install commands for macOS and Linux:
+**[docs/install-tools.md](docs/install-tools.md)**. More toolchain traps are in
+[maintaining.md](docs/maintaining.md#toolchain-traps).
 
 **Optional services** (each has a free option and a fallback, so the app runs without them):
 

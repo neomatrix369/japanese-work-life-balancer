@@ -10,6 +10,7 @@ Timefold accounts see [external-services.md](external-services.md).
 |---|---|---|
 | An old Maven earlier on `PATH` (e.g. `/opt/apache-maven-3.6.3`) | `make setup` stops with "Maven 3.9+ required" and lists every `mvn` it found | Put Homebrew's first on `PATH`, or pass `MVN=/opt/homebrew/bin/mvn` to every `make setup` / `demo` / `model` / `test` |
 | Pulled new commits, then `npm run build` or the UI fails on a missing module | A dependency was added (e.g. `@types/node`) | Re-run `make setup` after every pull; it is safe to repeat |
+| Ubuntu/Debian `apt install maven nodejs` | `make check` reports Maven 3.8.x or Node 18.x | apt's versions are too old; use the official downloads in [install-tools.md](install-tools.md#linux-ubuntu-2404--debian) |
 | JDK 21 installed by IntelliJ in `~/.jdks/` | `/usr/libexec/java_home -v 21` finds nothing, because macOS only lists JDKs in `/Library/Java/JavaVirtualMachines` | `make setup JAVA_HOME=$HOME/.jdks/<jdk-21-folder>/Contents/Home`, or install with `brew install openjdk@21` |
 | `make test` while the demo runs | Tests (on port 8084) recompile into the same `model/target/` that the running dev-mode model hot-reloads from | Stop `make demo` first, run `make test`, then start the demo again |
 
