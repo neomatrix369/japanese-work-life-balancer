@@ -101,6 +101,14 @@ export const TOUR_STEPS: TourStep[] = [
       `Meet a Tokyo company with ${ctx.teamSize ?? 'its'} employees. Every name and number is fictional. In Japan, long runs of work days are linked to burnout and karoshi (death from overwork). Let's plan next week with these controls.`,
   },
   {
+    id: 'about',
+    title: 'How it works — open any time',
+    target: null,
+    openAbout: true,
+    text: () =>
+      'Before we dive in — here is the engine behind every number. This page documents each constraint, the penalty formulas, and every KPI: labor cost, idle time, the consecutive-days health rule, and the preset weights the solver uses. Hit the info button in the toolbar to come back to it any time.',
+  },
+  {
     id: 'solve-cost',
     title: 'Plan 1: the cheapest week',
     target: 'kpis',
@@ -191,19 +199,11 @@ export const TOUR_STEPS: TourStep[] = [
     ),
   },
   {
-    id: ‘about’,
-    title: ‘How it works — open any time’,
-    target: null,
-    openAbout: true,
-    text: () =>
-      ‘Every number you just saw came from a real formula. This page documents each constraint, the penalty maths, and every KPI — labor cost, idle time, the consecutive-days health rule, and the preset weights. Hit the ⓘ button in the toolbar to open it any time.’,
-  },
-  {
-    id: ‘wrap’,
-    title: "That’s the idea",
+    id: 'wrap',
+    title: "That's the idea",
     target: null,
     text: () =>
-      ‘Hard rules are never broken. Health comes before cost, and the cost is visible, in yen and pounds, before anyone signs off the week.’,
+      'Hard rules are never broken. Health comes before cost, and the cost is visible, in yen and pounds, before anyone signs off the week.',
   },
 ];
 
