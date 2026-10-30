@@ -90,16 +90,30 @@ curl -s localhost:5173/tts            # {"voiceId":"…","modelId":"…"}
 
 `apiKey=MISSING` means the key wasn't found in any of the four places above.
 
+**Test the key end to end** (speaks one word, about 5 characters of quota):
+
+```bash
+curl -s -X POST localhost:5173/tts -H 'Content-Type: application/json' -d '{"text":"Hello"}' \
+  -o /tmp/tts-test.mp3 -w '%{http_code} %{content_type}\n'
+```
+
+`200 audio/mpeg` means the key, voice and model all work; open `/tmp/tts-test.mp3` to hear the voice. Any other
+answer is JSON with an error code, explained in the table below.
+
 ### Troubleshooting ElevenLabs
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | Tour says "browser voice" | No key, wrong key, or ElevenLabs slow/unreachable | Check `apiKey=present` in `.logs/ui.log`; check the [status page](https://status.elevenlabs.io/) |
 | Wrong voice plays after changing `ELEVENLABS_VOICE_ID` | UI server still running with the old setting, or an exported shell variable overrides `ui/.env.local` | Restart `make demo`; run `echo $ELEVENLABS_VOICE_ID` to spot a shell override |
-| Log shows `[tts] upstream 401` | Key revoked or mistyped | Create a new key |
-| Log shows `[tts] upstream 403` / missing permission | Key lacks **Text to Speech** | Edit the key's permissions |
-| Log shows `[tts] upstream 404` / voice not found | Voice ID typo, or a Library voice not added to **My Voices** | Add it to My Voices, re-copy the ID |
-| Log shows `[tts] upstream 429` / quota | Monthly characters used up | Wait for the reset or [upgrade](https://elevenlabs.io/pricing); cached lines still play |
+| `[tts] upstream 401 invalid_api_key` in `.logs/ui.log` | Key revoked, mistyped, or has stray quotes/spaces | Create a new key and paste it again |
+| `[tts] upstream 401` with a permissions code | Key lacks **Text to Speech** | Edit the key's permissions on the [API keys page](https://elevenlabs.io/app/api/api-keys) |
+| `[tts] upstream 404 voice_not_found` | Voice ID typo, or a Library voice not added to **My Voices** | Add it to My Voices, re-copy the ID |
+| `[tts] upstream 400 model_not_found` | `ELEVENLABS_MODEL_ID` typo | Remove it to use the default, or pick one from the [models guide](https://elevenlabs.io/docs/models) |
+| `[tts] upstream 429` or a quota code | Monthly characters used up, or too many requests | Wait for the reset or [upgrade](https://elevenlabs.io/pricing); cached lines still play |
+
+The 401, 404 and 400 lines above are the real responses (checked against the live API). The permission and quota
+rows follow ElevenLabs' documented behaviour but were not triggered here.
 
 ### Cost and caching
 
@@ -159,11 +173,14 @@ export JAVA_HOME=$(/usr/libexec/java_home -v 21)
    This turns on the `enterprise` Maven profile, which swaps in the `ai.timefold.solver.enterprise` artifacts. They
    come from Maven Central, so no extra Maven repository or credentials are needed. The same flag works for the
    whole stack: `make demo ENTERPRISE=1`.
-4. **Check it worked:** solve any scenario; the **Broken constraints** match counts now show numbers instead of "–".
+4. **Check it worked.** `.logs/model.log` shows
+   `Detected Timefold Solver Enterprise` and `Using Timefold Solver Enterprise Edition v2.7.0`. Solve any scenario:
+   the **Broken constraints** match counts now show numbers instead of "–" (e.g. `overloaded`: 150 unassigned tasks).
 
-> Once a licence expires, Timefold Solver Enterprise **refuses to start** — there is no grace period. Drop
-> `ENTERPRISE=1` to fall back to Community. (This repo's Enterprise path was checked up to dependency
-> resolution; a licensed run is not part of the automated checks.)
+> **Licence expiry.** Timefold logs `Timefold Solver will soon refuse to start, as the Timefold License is about to
+> expire` in the weeks before. Once it expires, Enterprise **refuses to start**; there is no grace period. Renew in
+> the [License Manager](https://licenses.timefold.ai/), or drop `ENTERPRISE=1` to fall back to Community.
+> (A licensed run was checked on 2026-10-30: start, solve, match counts, expiry warning.)
 
 ### Useful Timefold links
 
