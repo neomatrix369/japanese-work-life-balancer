@@ -111,10 +111,16 @@ voice. For the premium ElevenLabs narrator or Timefold Enterprise, see [external
     </a>
     <sub><b>Phone</b> — 390 px wide</sub>
   </td>
+  <td align="center" width="25%">
+    <a href="docs/screenshots/03-details/10-about-modal.png">
+      <img src="docs/screenshots/03-details/10-about-modal.png" width="100%" alt="About modal showing constraints, KPIs and stack">
+    </a>
+    <sub><b>About</b> — constraints &amp; stack</sub>
+  </td>
 </tr>
 </table>
 
-> Full gallery (15 shots, with captions) → [docs/screenshots/](docs/screenshots/README.md)
+> Full gallery (16 shots, with captions) → [docs/screenshots/](docs/screenshots/README.md)
 
 ---
 

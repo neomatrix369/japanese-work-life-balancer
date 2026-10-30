@@ -29,7 +29,7 @@ When the PRD and the build spec disagree, **the build spec wins** (it records de
 
 ```
 japanese-work-life-balancer/
-├── Makefile          # setup | data | model | ui | mcp | demo | test | clean
+├── Makefile          # check | setup | data | model | ui | mcp | demo | test | clean
 ├── scripts/
 │   ├── dev.sh        # started by `make demo`; spawns model, ui, mcp; logs → .logs/
 │   └── capture-gallery.py  # re-shoots docs/screenshots/ from a running demo (Playwright)
@@ -39,6 +39,7 @@ japanese-work-life-balancer/
 ├── .gitignore
 ├── docs/plan/        # PRD, questions, prompts
 ├── docs/external-services.md  # ElevenLabs + Timefold accounts, keys, licence (outside the repo)
+├── docs/install-tools.md      # macOS / Linux / WSL from-scratch tool installation
 ├── docs/maintaining.md        # checks, regeneration, toolchain traps (human-facing)
 ├── docs/screenshots/ # gallery + README
 ├── data-gen/         # Python generator (stdlib only, seeded) -> data-gen/out/*.json
