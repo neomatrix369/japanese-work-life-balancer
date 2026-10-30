@@ -16,7 +16,9 @@ When the PRD and the build spec disagree, **the build spec wins** (it records de
    and mark it with a `// MOCK:` or `# MOCK:` comment so it can be replaced later.
 2. **Hard constraints are never traded for anything.** Employee health and safety come before cost and profit.
 3. **No real personal data.** All names and data are synthetic and fictional. No health, family or age fields anywhere.
-4. **Never commit `timefold-license.pem`** or any secret. It lives in `~/timefold-license.pem` or `$TIMEFOLD_LICENSE_PATH`.
+4. **Never commit `timefold-license.pem`** or any secret. It lives in `~/timefold-license.pem`, `$TIMEFOLD_LICENSE_PATH`
+   (a path) or `$TIMEFOLD_LICENSE` (the PEM contents — never echo it), and is only used by `make model ENTERPRISE=1`.
+   The ElevenLabs key lives in `ui/.env.local` or the shell. Setup steps: `docs/external-services.md`.
 5. **Stop at every phase checkpoint**, run the checks listed there, show the results, and wait for the user before
    starting the next phase.
 6. When unsure about a Timefold API, check the docs (`https://docs.timefold.ai/llms.txt`) instead of guessing.
@@ -29,12 +31,16 @@ When the PRD and the build spec disagree, **the build spec wins** (it records de
 japanese-work-life-balancer/
 ├── Makefile          # setup | data | model | ui | mcp | demo | test | clean
 ├── scripts/
-│   └── dev.sh        # started by `make demo`; spawns model, ui, mcp; logs → .logs/
+│   ├── dev.sh        # started by `make demo`; spawns model, ui, mcp; logs → .logs/
+│   └── capture-gallery.py  # re-shoots docs/screenshots/ from a running demo (Playwright)
 ├── CLAUDE.md
 ├── README.md
 ├── DEMO.md           # 5-minute demo script
 ├── .gitignore
 ├── docs/plan/        # PRD, questions, prompts
+├── docs/external-services.md  # ElevenLabs + Timefold accounts, keys, licence (outside the repo)
+├── docs/maintaining.md        # checks, regeneration, toolchain traps (human-facing)
+├── docs/screenshots/ # gallery + README
 ├── data-gen/         # Python generator (stdlib only, seeded) -> data-gen/out/*.json
 ├── model/            # Timefold Solver + Quarkus REST service (copied from quickstarts employee-scheduling)
 ├── ui/               # Vite + React + TypeScript dashboard
@@ -81,6 +87,9 @@ japanese-work-life-balancer/
 1. Longevity view → 2. Hours-rather-not-work → 3. Pinning → 4. Profit metrics.
 
 ## Working rules learned (from the build)
+
+Human-facing version with commands: `docs/maintaining.md` (toolchain traps, ports, regenerating fixtures and
+screenshots via `scripts/capture-gallery.py`). Keep the two in step.
 
 - **UI agents: use a git worktree**, never work directly in the folder the live demo runs from. Symlink conflicts and
   hot-reload interference cause hard-to-diagnose failures.

@@ -24,7 +24,7 @@ help:
 	@printf '\nJapanese Work-Life Balancer — Makefile targets\n'
 	@printf '===============================================\n'
 	@printf '  setup   check JDK>=21, Maven>=3.9, Node>=20, Python3>=3.11;\n'
-	@printf '          install npm + Python deps; warn if no Timefold license\n'
+	@printf '          install npm + Python deps; report Timefold license status\n'
 	@printf '  data    generate synthetic JSON scenarios -> data-gen/out/\n'
 	@printf '  model   start Quarkus solver on :8083  (keep terminal open)\n'
 	@printf '  ui      start Vite dev server on :5173  (keep terminal open)\n'
@@ -36,8 +36,9 @@ help:
 	@printf '  make model JAVA_HOME=/opt/homebrew/opt/openjdk@21\n'
 	@printf '  make model MVN=/usr/local/bin/mvn\n'
 	@printf '  make mcp MODEL_URL=http://localhost:8083\n'
+	@printf '  make model ENTERPRISE=1   Timefold Enterprise (needs a license)\n'
 	@printf '\nTour voice (optional): ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID, ELEVENLABS_MODEL_ID\n'
-	@printf '  see README.md -> "Voice narration (ElevenLabs)"\n\n'
+	@printf '  put them in ui/.env.local — see docs/external-services.md\n\n'
 
 # ── setup ─────────────────────────────────────────────────────────────────────
 
@@ -56,6 +57,10 @@ setup:
 	@# Maven >=3.9 -------------------------------------------------------------
 	@$(MVN) -version >/dev/null 2>&1 \
 	  || { echo "ERROR: mvn not found on PATH (or MVN=... not set)."; exit 1; }
+	@$(MVN) -version 2>&1 | grep -qE 'Apache Maven (3\.(9|[1-9][0-9])|[4-9])\.' \
+	  || { echo "ERROR: Maven 3.9+ required. Found: $$($(MVN) -version 2>&1 | head -1)"; \
+	       echo "       Other mvn on PATH: $$(which -a mvn 2>/dev/null | tr '\n' ' ')"; \
+	       echo "       Fix: brew install maven and put it first on PATH, or: make setup MVN=/opt/homebrew/bin/mvn"; exit 1; }
 	@echo "  mvn:     OK ($$($(MVN) -version 2>&1 | awk '/Apache Maven/{print $$3}'))"
 	@# Node >=20 ---------------------------------------------------------------
 	@node --version 2>/dev/null | grep -qE '^v(2[0-9]|[3-9][0-9])\.' \
@@ -81,17 +86,18 @@ setup:
 	fi
 	@echo ""
 	@# Timefold license check — warn only, never fail --------------------------
+	@# TIMEFOLD_LICENSE holds the PEM text itself (never echoed); the others are file paths.
 	@_lic=""; \
-	[ -n "$${TIMEFOLD_LICENSE_PATH:-}" ] && _lic="$$TIMEFOLD_LICENSE_PATH"; \
-	[ -z "$$_lic" ] && [ -n "$${TIMEFOLD_LICENSE:-}" ] && _lic="$$TIMEFOLD_LICENSE"; \
+	[ -n "$${TIMEFOLD_LICENSE_PATH:-}" ] && [ -f "$$TIMEFOLD_LICENSE_PATH" ] && _lic="TIMEFOLD_LICENSE_PATH ($$TIMEFOLD_LICENSE_PATH)"; \
+	[ -z "$$_lic" ] && [ -n "$${TIMEFOLD_LICENSE:-}" ] && _lic="TIMEFOLD_LICENSE (PEM contents)"; \
 	[ -z "$$_lic" ] && [ -f "$$HOME/timefold-license.pem" ] && _lic="$$HOME/timefold-license.pem"; \
-	if [ -n "$$_lic" ] && [ -f "$$_lic" ]; then \
-	  echo "  Timefold license: found at $$_lic"; \
+	if [ -n "$$_lic" ]; then \
+	  echo "  Timefold license: found in $$_lic"; \
+	  echo "           Only used by the Enterprise build:  make model ENTERPRISE=1"; \
 	else \
-	  echo "  WARNING: No Timefold license found."; \
-	  echo "           The solver runs fine in Community edition without one."; \
-	  echo "           (Broken-constraints matchCount will show '-' in the UI.)"; \
-	  echo "           Set TIMEFOLD_LICENSE_PATH if you have a hackathon license."; \
+	  echo "  Note: no Timefold license found — fine, the default Community edition needs none."; \
+	  echo "        (Broken-constraints match counts show '-' in the UI.)"; \
+	  echo "        For Enterprise, see docs/external-services.md#timefold-solver-community-or-enterprise"; \
 	fi
 	@echo ""
 	@echo "==> Setup complete. Run:  make demo"
