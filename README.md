@@ -11,6 +11,99 @@ is guaranteed to be feasible (zero hard-constraint violations). A health-first p
 working days; a cost-first preset shows what the same week costs when health is deprioritised. The gap
 between the two is the monetary value of protecting your staff.
 
+<p align="center">
+  <a href="docs/screenshots/02-dashboard/04-compare-runs.png">
+    <img src="docs/screenshots/02-dashboard/04-compare-runs.png" width="90%"
+         alt="Compare runs: health-first protects 7 more people than cost-first for about 99,600 yen more labor cost">
+  </a>
+  <br>
+  <sub>Same <code>burnout</code> week, two plans: <b>health-first</b> puts 7 fewer people at risk for ~¥100k more payroll.</sub>
+</p>
+
+## Contents
+
+- [Quick start](#quick-start) · [Screenshots](#screenshots) · [Architecture](#architecture)
+- **Setup:** [Prerequisites](#prerequisites) · [Run services one at a time](#run-services-one-at-a-time)
+- **Using the app:** [Guided tour](#guided-tour) · [Dashboard walkthrough](#dashboard-walkthrough) ·
+  [Look and feel](#look-and-feel) · [Voice narration](#voice-narration-elevenlabs) · [Use it from Claude](#use-it-from-claude)
+- **Reference:** [REST API](#rest-api-quick-reference) · [How it plans](#how-it-plans) · [Scenarios](#scenarios) ·
+  [What is mocked or simplified](#what-is-mocked-or-simplified) · [Troubleshooting](#troubleshooting)
+- [Credits and license](#credits-and-license)
+
+> Most sections below are folded. Click a **▸** line to open it.
+
+---
+
+## Quick start
+
+```bash
+make setup   # checks tools, installs npm & Python deps
+make demo    # generates data, starts model + ui + mcp; Ctrl-C stops all
+```
+
+Open **http://localhost:5173** in your browser, then click **▶ Play demo** for a hands-free narrated tour.
+
+---
+
+## Screenshots
+
+<table>
+<tr>
+  <td align="center" width="25%">
+    <a href="docs/screenshots/01-cli/01-make-help.png">
+      <img src="docs/screenshots/01-cli/01-make-help.png" width="100%" alt="make help output">
+    </a>
+    <sub><b>CLI</b> — one <code>make</code> target per service</sub>
+  </td>
+  <td align="center" width="25%">
+    <a href="docs/screenshots/02-dashboard/03-burnout-health-first.png">
+      <img src="docs/screenshots/02-dashboard/03-burnout-health-first.png" width="100%" alt="Dashboard after a health-first solve">
+    </a>
+    <sub><b>Dashboard</b> — KPIs and week grid</sub>
+  </td>
+  <td align="center" width="25%">
+    <a href="docs/screenshots/03-details/07-employee-panel.png">
+      <img src="docs/screenshots/03-details/07-employee-panel.png" width="100%" alt="Employee side panel">
+    </a>
+    <sub><b>Employee</b> — one person's week and risk</sub>
+  </td>
+  <td align="center" width="25%">
+    <a href="docs/screenshots/05-tour/13-tour-step.png">
+      <img src="docs/screenshots/05-tour/13-tour-step.png" width="100%" alt="Guided tour step">
+    </a>
+    <sub><b>Guided tour</b> — narrated, solves live</sub>
+  </td>
+</tr>
+<tr>
+  <td align="center" width="25%">
+    <a href="docs/screenshots/02-dashboard/05-solver-replay.png">
+      <img src="docs/screenshots/02-dashboard/05-solver-replay.png" width="100%" alt="Solver replay bar">
+    </a>
+    <sub><b>Replay</b> — how the solver improved</sub>
+  </td>
+  <td align="center" width="25%">
+    <a href="docs/screenshots/03-details/09-overloaded-broken-constraints.png">
+      <img src="docs/screenshots/03-details/09-overloaded-broken-constraints.png" width="100%" alt="Broken constraints for the overloaded week">
+    </a>
+    <sub><b>Overloaded week</b> — still 0 hard</sub>
+  </td>
+  <td align="center" width="25%">
+    <a href="docs/screenshots/04-themes-and-mobile/10-dark-theme.png">
+      <img src="docs/screenshots/04-themes-and-mobile/10-dark-theme.png" width="100%" alt="Dark theme in GBP">
+    </a>
+    <sub><b>Dark theme</b> — money in GBP</sub>
+  </td>
+  <td align="center" width="25%">
+    <a href="docs/screenshots/04-themes-and-mobile/11-mobile-390.png">
+      <img src="docs/screenshots/04-themes-and-mobile/11-mobile-390.png" width="100%" alt="Phone width layout">
+    </a>
+    <sub><b>Phone</b> — 390 px wide</sub>
+  </td>
+</tr>
+</table>
+
+> Full gallery (15 shots, with captions) → [docs/screenshots/](docs/screenshots/README.md)
+
 ---
 
 ## Architecture
@@ -41,6 +134,9 @@ flowchart LR
 
 ## Prerequisites
 
+<details>
+<summary>JDK 21, Maven 3.9, Node 20, Python 3.11 — and an optional Timefold license</summary>
+
 | Tool | Minimum | Check |
 |---|---|---|
 | JDK | 21 | `java -version` |
@@ -60,20 +156,12 @@ export TIMEFOLD_LICENSE=/path/to/timefold-license.pem
 # or drop it at ~/timefold-license.pem
 ```
 
----
-
-## Quick start
-
-```bash
-make setup   # checks tools, installs npm & Python deps
-make demo    # generates data, starts model + ui + mcp; Ctrl-C stops all
-```
-
-Open **http://localhost:5173** in your browser.
-
----
+</details>
 
 ## Run services one at a time
+
+<details>
+<summary>One <code>make</code> target per service, each in its own terminal</summary>
 
 Run each in a separate terminal from the project root:
 
@@ -85,6 +173,8 @@ make mcp     # start MCP server on :8765 (keep running)
 make test    # run model unit tests (model must NOT be running with quarkus:dev)
 make clean   # remove build outputs and data-gen/out/
 ```
+
+</details>
 
 ---
 
@@ -98,6 +188,9 @@ if the model is not reachable it falls back to recorded results automatically.
 Keyboard: **Space** pause/resume, **← →** back/next, **Esc** exit.
 
 ### Dashboard walkthrough
+
+<details>
+<summary>16 steps: solve, read the KPIs and grid, compare presets, replay, theme, currency, role</summary>
 
 1. **Pick a scenario** from the dropdown (top left) — e.g. `burnout`.
 2. **Pick a preset** — `health-first` (default), `balanced` or `cost-first`.
@@ -127,7 +220,12 @@ Keyboard: **Space** pause/resume, **← →** back/next, **Esc** exit.
 16. Every panel is **collapsible**: click its header to fold it away; the page remembers your choice.
     The guided tour opens a folded panel when it needs to point at it.
 
+</details>
+
 ### Look and feel
+
+<details>
+<summary>Design tokens, contrast, icons and reduced motion</summary>
 
 The design language lives in [`design-system/MASTER.md`](design-system/MASTER.md): colour tokens named by meaning
 (`--ink`, `--surface`, `--accent`, `--signal-good/warn/bad`), a type and spacing scale, and motion timings, with every
@@ -135,7 +233,12 @@ text colour pair at 4.5:1 contrast or better in light and dark. [`ui/src/theme.c
 and only restyles existing classes, so visual changes never touch component markup. Icons are SVG
 ([Lucide](https://lucide.dev)); animations switch off when the system asks for reduced motion.
 
+</details>
+
 ### Voice narration (ElevenLabs)
+
+<details>
+<summary>Optional premium voice for the tour — env vars, picking a voice, fallback</summary>
 
 The **▶ Play demo** tour reads each step aloud and waits for the line to finish before it moves on.
 Press **🔊/🔇** in the tour controls (or **M**) to mute. The app remembers your choice.
@@ -167,7 +270,12 @@ reads the tour, and the tour controls show a small "browser voice" note. The tou
 **The key never reaches the browser.** The browser posts text to `POST /tts` on the Vite server, and
 only the server calls ElevenLabs. The key is not in the built bundle.
 
+</details>
+
 ### Use it from Claude
+
+<details>
+<summary>Register the MCP server, 7 tools, example prompts</summary>
 
 Register the MCP server (the model must be running):
 
@@ -203,9 +311,14 @@ why each unassigned task couldn't be covered.
 Show me the schedule for employee E-023 after solving the normal scenario.
 ```
 
+</details>
+
 ---
 
 ## REST API quick reference
+
+<details>
+<summary>Endpoints on <code>http://localhost:8083</code> and a curl example</summary>
 
 Base URL: `http://localhost:8083`
 
@@ -231,9 +344,14 @@ sleep 32
 curl -s "localhost:8083/schedules/$JOB" | jq '{score, kpis}'
 ```
 
+</details>
+
 ---
 
 ## How it plans
+
+<details>
+<summary>Hard, medium and soft constraints, and how each preset weighs them</summary>
 
 ### Constraints
 
@@ -270,9 +388,14 @@ curl -s "localhost:8083/schedules/$JOB" | jq '{score, kpis}'
 The `health-first` preset is the default. `cost-first` reproduces the original PRD's "report health, don't score it"
 behaviour, which makes the health–cost trade-off visible side by side in the compare panel.
 
+</details>
+
 ---
 
 ## Scenarios
+
+<details>
+<summary>Five synthetic weeks: <code>tiny</code>, <code>normal</code>, <code>overloaded</code>, <code>holiday</code>, <code>burnout</code></summary>
 
 | File | Week starts | Public holidays | Employees | Tasks (approx.) | Load | Story |
 |---|---|---|---|---|---|---|
@@ -286,9 +409,14 @@ Task counts are tuned to hit the target load ratios, not fixed at a round number
 The `burnout` scenario is calibrated so that `health-first` and `cost-first` produce visibly different
 at-risk counts without leaving too many tasks unassigned under either preset.
 
+</details>
+
 ---
 
 ## What is mocked or simplified
+
+<details>
+<summary>Deliberate hackathon shortcuts: no persistence, no auth, fixed FX, derived shifts, and more</summary>
 
 These simplifications were deliberate choices for the hackathon build:
 
@@ -303,11 +431,15 @@ These simplifications were deliberate choices for the hackathon build:
 - **Broken-constraints `matchCount` shows "–".** Timefold Solver 2.7 Community edition's score analysis does not return per-match counts; the UI falls back to showing "–" for that column. Enterprise edition would show exact counts.
 - **Scenarios retuned for demonstrability.** The original spec called for 65% load in `normal` and 85% load / 60% carry-in in `burnout`. At those numbers, `burnout` had a provable floor of ~39 at-risk employees regardless of preset (Monday alone needed 46 concurrent staff but only 14 could safely work consecutive days), so `health-first` and `cost-first` would have looked identical. The generator was retuned: ordinary staff carry in 0–1 days (was 0–2); `normal` targets ~50% load; `burnout` targets ~55% load with ~30% of staff carrying in 2–5 days. Approximate achieved ratios are printed by the generator at runtime.
 
+</details>
+
 ---
 
 ## Troubleshooting
 
-**Wrong Java or Maven version on PATH**
+<details>
+<summary>Wrong Java or Maven version on PATH</summary>
+
 ```bash
 java -version   # must show 21+
 mvn -version    # must show 3.9+
@@ -322,38 +454,66 @@ Override Maven itself:
 make model MVN=/usr/local/bin/mvn
 ```
 
-**Port already in use**
+</details>
+
+<details>
+<summary>Port already in use</summary>
+
 ```bash
 lsof -ti :8083 | xargs kill   # model
 lsof -ti :5173 | xargs kill   # ui
 lsof -ti :8765 | xargs kill   # mcp
 ```
 
-**UI shows "Model not running"**
+If an old `make demo` is still holding `:5173`, Vite starts the new UI on the next free port (e.g. `:5174`) and
+the old tab keeps showing "Model not running". Check `.logs/ui.log` for the `Local:` URL, or stop the old process.
+
+</details>
+
+<details>
+<summary>UI shows "Model not running"</summary>
+
 The model takes 10–20 seconds to start. Wait for the Quarkus `Started in …` log line before loading the UI.
 `make demo` waits automatically — it polls `localhost:8083/demo-data` before starting the other services.
 
-**MCP server can't reach the model**
+</details>
+
+<details>
+<summary>MCP server can't reach the model</summary>
+
 Set `MODEL_URL` before starting the MCP server:
 ```bash
 export MODEL_URL=http://localhost:8083
 make mcp
 ```
 
-**`make setup` warns about no license file**
+</details>
+
+<details>
+<summary><code>make setup</code> warns about no license file</summary>
+
 This is a warning, not a failure. The solver runs in Community edition. If you have a Timefold hackathon license,
 set `TIMEFOLD_LICENSE_PATH` as described in [Prerequisites](#prerequisites).
 
-**Solver finishes but still shows hard violations**
+</details>
+
+<details>
+<summary>Solver finishes but still shows hard violations</summary>
+
 This should not happen in normal scenarios. If it does, increase the solve time:
 ```bash
 curl -s -X POST "localhost:8083/schedules/scenario/normal?preset=health-first&limitSeconds=60"
 ```
 The default is 30 seconds; the maximum accepted value is 60.
 
+</details>
+
 ---
 
 ## Credits and license
+
+Built at Hack for Humanity London 2026-10-29 by Mani Sarkar ([@neomatrix369](https://github.com/neomatrix369))
+in collaboration with Risako ([@inforisako](https://github.com/inforisako)).
 
 The model is derived from
 [TimefoldAI/timefold-quickstarts](https://github.com/TimefoldAI/timefold-quickstarts) (Apache-2.0),
@@ -364,5 +524,3 @@ v2 `MCPServer` API (successor of the deprecated `FastMCP` class).
 
 All employee names and company data in the scenarios are **synthetic and fictional**.
 No real personal data, health records or company information is used anywhere.
-
-Built at Hack for Humanity London 2026-10-29.
