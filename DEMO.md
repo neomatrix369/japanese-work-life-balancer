@@ -13,6 +13,17 @@ Have open: **http://localhost:5173** in Chrome or Firefox.
 
 Services at a glance: UI on :5173, model REST API on :8083, MCP server on :8765.
 
+**Five-minute pre-flight** (do this before the audience arrives):
+
+- [ ] The UI really is on 5173: `grep -m1 Local: .logs/ui.log`. If it says 5174, an old Vite is still running;
+      see [maintaining.md → Ports](docs/maintaining.md#ports-and-stale-processes).
+- [ ] Voice: `.logs/ui.log` shows `apiKey=present`, and `curl -s localhost:5173/tts` shows the voice you expect.
+      No key is fine; the tour falls back to the browser voice ([setup](docs/external-services.md#elevenlabs-premium-tour-voice)).
+- [ ] Play the tour once end to end. The fixed lines are then cached in `ui/.tts-cache/`, so the live run starts
+      instantly and uses little quota. Lines that read live numbers ("Right now: 22 people at risk…") change with
+      every solve, so they still go to ElevenLabs.
+- [ ] Sound on, the correct output device chosen, and the browser tab not muted.
+
 ---
 
 ## Step 0 — Guided tour option (about 3–4 min, replaces Steps 2–4)
