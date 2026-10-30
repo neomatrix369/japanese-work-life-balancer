@@ -27,6 +27,20 @@ interface DeltaRowProps {
   rawDelta: number;
 }
 
+/** Lets a long score like `0hard/-1medium/-1068814soft` wrap after each `/` inside a narrow column. */
+function ScoreParts({ score }: { score: string }) {
+  return (
+    <>
+      {score.split('/').map((part, i, parts) => (
+        <React.Fragment key={i}>
+          {part}
+          {i < parts.length - 1 && <>/<wbr /></>}
+        </React.Fragment>
+      ))}
+    </>
+  );
+}
+
 function DeltaRow({ label, savedVal, currentVal, delta, positive, rawDelta }: DeltaRowProps) {
   let deltaClass = 'delta-neu';
   if (rawDelta !== 0 && positive !== null) {
@@ -151,9 +165,11 @@ export function CompareRuns({
           >
             <span style={{ flex: 1 }}>Score</span>
             <span style={{ width: 90, textAlign: 'right', color: 'var(--fg-muted)' }}>
-              {savedRun.response.score}
+              <ScoreParts score={savedRun.response.score} />
             </span>
-            <span style={{ width: 90, textAlign: 'right' }}>{currentResponse.score}</span>
+            <span style={{ width: 90, textAlign: 'right' }}>
+              <ScoreParts score={currentResponse.score} />
+            </span>
             <span style={{ width: 80 }} />
           </div>
         </>
