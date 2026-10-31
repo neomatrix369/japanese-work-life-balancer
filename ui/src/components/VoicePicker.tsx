@@ -1,11 +1,18 @@
 import type { VoiceProviderState } from '../tour/useVoiceProvider';
+import { optionKey, type ProviderOption } from '../tour/voice';
+
+/** "Gemini · Sulafat (warm)"; adds the voice when the server's label does not already name it. */
+function optionLabel(p: ProviderOption): string {
+  const showVoice = p.voice && p.id !== 'elevenlabs' && !p.label.includes(p.voice);
+  return `${p.label}${showVoice ? ` · ${p.voice}` : ''}${p.configured ? '' : ' (no key)'}`;
+}
 
 /**
- * Narration voice dropdown (ElevenLabs / Gemini / Gemini Argon / Browser voice). Providers
+ * Narration voice dropdown (ElevenLabs / each Gemini voice / Gemini Argon / Browser voice). Options
  * without a server key stay listed but disabled, so it is clear why they cannot be picked.
  */
 export function VoicePicker({ state, id, compact = false }: { state: VoiceProviderState; id: string; compact?: boolean }) {
-  const { provider, providers, setProvider } = state;
+  const { selected, providers, select } = state;
   return (
     <span className="voice-field">
       {!compact && <label htmlFor={id}>Voice</label>}
@@ -13,17 +20,18 @@ export function VoicePicker({ state, id, compact = false }: { state: VoiceProvid
         id={id}
         className="voice-picker"
         aria-label={compact ? 'Narration voice' : undefined}
-        value={provider}
-        onChange={(e) => setProvider(e.target.value as VoiceProviderState['provider'])}
+        value={selected}
+        onChange={(e) => select(e.target.value)}
         title="Narration voice for the guided tour. First play of a line is slower; replays come from the cache."
       >
-        {providers.map((p) => (
-          <option key={p.id} value={p.id} disabled={!p.configured && p.id !== provider}>
-            {p.label}
-            {p.voice && p.id !== 'elevenlabs' ? ` · ${p.voice}` : ''}
-            {p.configured ? '' : ' (no key)'}
-          </option>
-        ))}
+        {providers.map((p) => {
+          const key = optionKey(p);
+          return (
+            <option key={key} value={key} disabled={!p.configured && key !== selected}>
+              {optionLabel(p)}
+            </option>
+          );
+        })}
       </select>
     </span>
   );

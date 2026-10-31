@@ -16,7 +16,7 @@ export function VoiceToggle({ voice }: { voice: TourVoice }) {
       >
         {voice.muted ? '🔇' : '🔊'}
       </button>
-      {!voice.muted && voice.voiceId && !voice.browserVoice && (
+      {!voice.muted && voice.voiceId && !voice.browserVoice && voice.voiceProvider.provider === 'elevenlabs' && (
         <span
           className="tour-voice-note"
           title={`Click to copy voice ID: ${voice.voiceId}`}

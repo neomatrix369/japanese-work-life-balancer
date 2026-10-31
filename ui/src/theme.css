@@ -305,7 +305,9 @@ code {
 
 /* Voice picker: label + select never split across a wrap; the provider name sets the width. */
 .voice-field { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
-.topbar select.voice-picker { max-width: none; }
+/* long names ("Gemini · Vindemiatrix (gentle)") never push the page sideways on a phone */
+.topbar select.voice-picker,
+.tour-controls .voice-picker { max-width: min(260px, 100%); text-overflow: ellipsis; }
 
 /* Theme toggle: a quiet segmented control */
 .theme-toggle {
@@ -830,6 +832,9 @@ td svg, th svg { vertical-align: -2px; }
   .topbar label { margin-left: 0; }
   .topbar select { width: 100%; min-width: 0; max-width: none; }
   .topbar select:first-of-type { grid-column: 2 / -1; }
+  /* Voice gets its own row: its long names would otherwise widen a shared auto column and push
+     Time limit / Role off-screen. */
+  .topbar .voice-field { grid-column: 1 / -1; display: grid; grid-template-columns: auto minmax(0, 1fr); }
   .theme-toggle-btn { width: 32px; height: 28px; }
 
   .status-line { padding: var(--space-2) var(--space-4); }

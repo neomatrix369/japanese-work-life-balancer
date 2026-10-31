@@ -11,7 +11,7 @@
 export type VoiceKind = 'premium' | 'browser' | 'none';
 
 /** Same ids as the server's `VoiceProvider` in tts-plugin.ts. */
-export type VoiceProvider = 'elevenlabs' | 'gemini' | 'gemini-argon' | 'browser';
+export type VoiceProvider = 'elevenlabs' | 'gemini' | 'gemini-argon' | 'gemini-ja' | 'browser';
 
 export interface ProviderOption {
   id: VoiceProvider;
@@ -21,10 +21,25 @@ export interface ProviderOption {
   configured: boolean;
 }
 
-const PROVIDER_IDS: readonly VoiceProvider[] = ['elevenlabs', 'gemini', 'gemini-argon', 'browser'];
+const PROVIDER_IDS: readonly VoiceProvider[] = ['elevenlabs', 'gemini', 'gemini-argon', 'gemini-ja', 'browser'];
+/** providers with several voices in the picker: the voice is part of the option key */
+const MULTI_VOICE: readonly VoiceProvider[] = ['gemini', 'gemini-ja'];
 
 export function isVoiceProvider(value: unknown): value is VoiceProvider {
   return typeof value === 'string' && (PROVIDER_IDS as readonly string[]).includes(value);
+}
+
+/**
+ * Picker value for an option: "<provider>|<voice>" for Gemini and Japanese voices (several share a provider),
+ * otherwise just the provider id.
+ */
+export function optionKey(p: Pick<ProviderOption, 'id' | 'voice'>): string {
+  return MULTI_VOICE.includes(p.id) && p.voice ? `${p.id}|${p.voice}` : p.id;
+}
+
+function providerOf(key: string): VoiceProvider | null {
+  const id = key.split('|')[0];
+  return isVoiceProvider(id) ? id : null;
 }
 
 /** Shown before GET /tts answers (or when it never does). */
@@ -53,8 +68,12 @@ export interface Narrator {
   provider(): VoiceProvider;
   /** providers the server offers (with key status) */
   providers(): ProviderOption[];
-  /** switch provider; remembered across visits, takes effect from the next line */
+  /** switch provider (with its default voice); remembered across visits, takes effect from the next line */
   setProvider(p: VoiceProvider): void;
+  /** the picker value in use (see `optionKey`) */
+  selected(): string;
+  /** switch to one picker option (provider + voice); remembered across visits */
+  select(key: string): void;
   /** notified when `voice()`, the provider or the provider list changes; returns an unsubscribe */
   subscribe(fn: () => void): () => void;
 }
@@ -74,6 +93,8 @@ export const SILENT_NARRATOR: Narrator = {
   provider: () => 'browser',
   providers: () => FALLBACK_PROVIDERS,
   setProvider: () => undefined,
+  selected: () => 'browser',
+  select: () => undefined,
   subscribe: () => () => undefined,
 };
 
@@ -149,10 +170,10 @@ export const MUTE_STORAGE_KEY = 'tourVoiceMuted';
 export const PROVIDER_STORAGE_KEY = 'tourVoiceProvider';
 export const TTS_TIMEOUT_MS = 4000;
 /**
- * Gemini needs ~4 s for a first-time line and Argon ~17 s (it writes the line, then speaks
+ * Gemini needs ~4 s for a first-time line and Argon ~17 s (it writes the line, then speaks / Japanese ~7 s (translate, then speak)
  * it), so they get longer waits. Audio is cached on disk, so a rehearsal run makes replays instant.
  */
-export const PROVIDER_TIMEOUT_MS: Partial<Record<VoiceProvider, number>> = { gemini: 10_000, 'gemini-argon': 25_000 };
+export const PROVIDER_TIMEOUT_MS: Partial<Record<VoiceProvider, number>> = { gemini: 10_000, 'gemini-ja': 12_000, 'gemini-argon': 25_000 };
 const MAX_SERVER_CHARS = 600; // same limit as the /tts route
 /** a 0-sample WAV: playing it inside a click "unlocks" audio for later */
 const SILENT_WAV = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
@@ -222,17 +243,32 @@ function capMs(text: string): number {
 export function createNarrator(overrides: Partial<NarratorDeps> = {}): Narrator {
   const d: NarratorDeps = { ...browserDeps(), ...overrides };
   let muted = false;
-  let chosen: VoiceProvider | null = null;
+  /** the user's picked option key (see optionKey), or null to follow the server default */
+  let chosen: string | null = null;
   try {
     muted = d.storage?.getItem(MUTE_STORAGE_KEY) === '1';
     const stored = d.storage?.getItem(PROVIDER_STORAGE_KEY);
-    if (isVoiceProvider(stored)) chosen = stored;
+    if (stored && providerOf(stored)) chosen = stored;
   } catch {
     muted = false;
   }
   let serverDefault: VoiceProvider = 'elevenlabs';
   let providerList: ProviderOption[] = FALLBACK_PROVIDERS;
-  const currentProvider = (): VoiceProvider => chosen ?? serverDefault;
+  const currentProvider = (): VoiceProvider => (chosen && providerOf(chosen)) || serverDefault;
+  /** the listed option for the choice; a stale key (e.g. a removed voice) falls back to its provider's first option */
+  const chosenOption = (): ProviderOption | undefined =>
+    chosen
+      ? (providerList.find((p) => optionKey(p) === chosen) ?? providerList.find((p) => p.id === providerOf(chosen!)))
+      : undefined;
+  const selectedKey = (): string => {
+    const o = chosen ? chosenOption() : providerList.find((p) => p.id === serverDefault);
+    return o ? optionKey(o) : (chosen ?? serverDefault);
+  };
+  /** voice to send for a multi-voice provider, read from the key itself so it works before GET /tts answers */
+  const chosenGeminiVoice = (): string | undefined => {
+    const [, voice] = (chosen ?? '').split('|');
+    return voice || undefined;
+  };
   let token = 0;
   let audio: AudioLike | null = null;
   let finishCurrent: (() => void) | null = null;
@@ -277,7 +313,7 @@ export function createNarrator(overrides: Partial<NarratorDeps> = {}): Narrator 
   function audioUrl(line: string): Promise<string | null> {
     const provider = currentProvider();
     if (provider === 'browser') return Promise.resolve(null);
-    const cacheKey = `${provider}\n${line}`;
+    const cacheKey = `${selectedKey()}\n${line}`;
     const hit = urls.get(cacheKey);
     if (hit) return hit;
     if (!d.fetch || line.length > MAX_SERVER_CHARS || d.now() < serverOffUntil) return Promise.resolve(null);
@@ -288,7 +324,9 @@ export function createNarrator(overrides: Partial<NarratorDeps> = {}): Narrator 
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           // no provider until the user picks one: the server's default (as before)
-          body: JSON.stringify(chosen ? { text: line, provider } : { text: line }),
+          body: JSON.stringify(
+            chosen ? { text: line, provider, ...(chosenGeminiVoice() ? { voiceId: chosenGeminiVoice() } : {}) } : { text: line },
+          ),
         });
         if (res.ok && (res.headers.get('content-type') ?? '').includes('audio')) {
           return d.createObjectURL(await res.blob());
@@ -433,16 +471,19 @@ export function createNarrator(overrides: Partial<NarratorDeps> = {}): Narrator 
       }
     },
     voice: () => kind,
-    voiceId: () =>
-      chosen ? (providerList.find((p) => p.id === chosen)?.voice ?? null) : activeVoiceId,
+    voiceId: () => (chosen ? (chosenOption()?.voice ?? null) : activeVoiceId),
     provider: currentProvider,
     providers: () => providerList,
     setProvider(p) {
-      if (p === currentProvider() && chosen) return;
-      chosen = p;
-      serverOffUntil = 0; // a failure on the old provider says nothing about the new one
+      narrator.select(p);
+    },
+    selected: selectedKey,
+    select(key) {
+      if (!providerOf(key) || key === chosen) return;
+      chosen = key;
+      serverOffUntil = 0; // a failure on the old voice says nothing about the new one
       try {
-        d.storage?.setItem(PROVIDER_STORAGE_KEY, p);
+        d.storage?.setItem(PROVIDER_STORAGE_KEY, key);
       } catch {
         // best-effort; the in-memory choice still applies
       }
