@@ -24,7 +24,7 @@ between the two is the monetary value of protecting your staff.
 
 - [Quick start](#quick-start) · [Screenshots](#screenshots) · [Architecture](#architecture)
 - **Setup:** [Prerequisites](#prerequisites) · [Run services one at a time](#run-services-one-at-a-time) ·
-  [External services (ElevenLabs, Timefold)](docs/external-services.md) · [Maintaining](docs/maintaining.md)
+  [External services (ElevenLabs, Gemini, Timefold)](docs/external-services.md) · [Maintaining](docs/maintaining.md)
 - **Using the app:** [Guided tour](#guided-tour) · [Dashboard walkthrough](#dashboard-walkthrough) ·
   [Look and feel](#look-and-feel) · [Voice narration](#voice-narration-elevenlabs) · [Use it from Claude](#use-it-from-claude)
 - **Reference:** [REST API](#rest-api-quick-reference) · [How it plans](#how-it-plans) · [Scenarios](#scenarios) ·
@@ -53,7 +53,7 @@ prints the fix.
 copy-paste installs for macOS and Linux (Ubuntu/Debian), then come back here.
 
 No accounts are needed: the solver runs on Timefold's free Community Edition and the tour uses your browser's
-voice. For the premium ElevenLabs narrator or Timefold Enterprise, see [external services](docs/external-services.md).
+voice. For the premium ElevenLabs or Gemini narrators, or Timefold Enterprise, see [external services](docs/external-services.md).
 
 ---
 
@@ -175,6 +175,7 @@ an older Maven sits earlier on your `PATH`. Install commands for macOS and Linux
 **Optional services** (each has a free option and a fallback, so the app runs without them):
 
 - **ElevenLabs** — the premium narrator voice for the tour. Needs an API key in `ui/.env.local`.
+- **Gemini** — two more tour voices (Gemini TTS, and Gemini Argon commentary), picked from the **Voice** dropdown. Needs `GEMINI_API_KEY`.
 - **Timefold Enterprise** — exact match counts in *Broken constraints*. Needs a license and `make demo ENTERPRISE=1`;
   a license has no effect on the default Community build.
 
@@ -555,7 +556,7 @@ matters for the Enterprise build (`make demo ENTERPRISE=1`), which fills in the 
 <details>
 <summary>The tour uses the browser voice, or the wrong ElevenLabs voice</summary>
 
-Check `.logs/ui.log` for `apiKey=present` and run `curl -s localhost:5173/tts` to see the active voice. After changing
+Check `.logs/ui.log` for `elevenLabsKey=present` (or `geminiKey=present`) and run `curl -s localhost:5173/tts` to see the default voice and which providers have a key. Also check the **Voice** dropdown: a voice picked there overrides the default. After changing
 `ELEVENLABS_VOICE_ID`, restart `make demo`, and make sure an `export` in your shell isn't overriding `ui/.env.local`.
 Error codes and fixes: [ElevenLabs troubleshooting](docs/external-services.md#troubleshooting-elevenlabs).
 

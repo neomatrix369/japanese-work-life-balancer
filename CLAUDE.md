@@ -38,7 +38,7 @@ japanese-work-life-balancer/
 ├── DEMO.md           # 5-minute demo script
 ├── .gitignore
 ├── docs/plan/        # PRD, questions, prompts
-├── docs/external-services.md  # ElevenLabs + Timefold accounts, keys, licence (outside the repo)
+├── docs/external-services.md  # ElevenLabs, Gemini + Timefold accounts, keys, licence (outside the repo)
 ├── docs/install-tools.md      # macOS / Linux / WSL from-scratch tool installation
 ├── docs/maintaining.md        # checks, regeneration, toolchain traps (human-facing)
 ├── docs/screenshots/ # gallery + README

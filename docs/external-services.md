@@ -85,11 +85,11 @@ The voice and model are read **once when the UI server starts**, so restart `mak
 Then confirm what the server picked up:
 
 ```bash
-grep '\[tts\]' .logs/ui.log          # e.g. [tts] voice=pFZP5JQG7iQjIQuC4Bku model=eleven_multilingual_v2 apiKey=present
-curl -s localhost:5173/tts            # {"voiceId":"…","modelId":"…"}
+grep '\[tts\]' .logs/ui.log          # e.g. [tts] default=elevenlabs geminiKey=present elevenLabsKey=present
+curl -s localhost:5173/tts            # {"provider":"elevenlabs","voiceId":"…","providers":[…]}
 ```
 
-`apiKey=MISSING` means the key wasn't found in any of the four places above.
+`elevenLabsKey=missing` means the key wasn't found in any of the four places above.
 
 **Test the key end to end** (speaks one word, about 5 characters of quota):
 
