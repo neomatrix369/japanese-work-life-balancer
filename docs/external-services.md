@@ -130,9 +130,14 @@ server calls ElevenLabs. The key is not in the built bundle.
 
 ## Gemini (tour voices)
 
-Adds two choices to the **Voice** dropdown (top bar, and next to 🔊 in the tour controls):
+Adds these choices to the **Voice** dropdown (top bar, and next to 🔊 in the tour controls):
 
-- **Gemini**: `gemini-3.8-flash-tts` reads the step text in the `Aoede` voice.
+- **Gemini** (six voices): `gemini-3.8-flash-tts` reads the step text as Aoede (breezy), Sulafat (warm), Achernar
+  (soft), Vindemiatrix (gentle), Gacrux (mature) or Achird (friendly). The team picked these by ear.
+- **日本語 · Sulafat / Achird**: `gemini-3.8-flash` translates each step into spoken Japanese (thinking off: ~2.4 s
+  instead of ~11 s), then the voice reads it. Numbers and names (Sato-san → 佐藤さん) are kept. This is machine
+  translation: have a native speaker check the tour lines before a Japanese-language demo. If translation fails,
+  the English line is spoken.
 - **Gemini Argon**: `gemini-4-argon` first rewrites the step as one or two spoken sentences about wellbeing and rest,
   then Gemini TTS reads that. If Argon fails, the original step text is spoken instead.
 
@@ -145,6 +150,10 @@ ElevenLabs stays the default whenever its key is set; Gemini only speaks when pi
 2. Put it in your shell (`export GEMINI_API_KEY=…`) or in `ui/.env.local` (git-ignored): `GEMINI_API_KEY=your_key_here`.
 3. Restart `make demo` and check `.logs/ui.log` for `geminiKey=present`, or run `curl -s localhost:5173/tts`
    (Gemini shows `"configured":true`).
+
+**No "speak like a person" prompt.** Tested 2026-10-31 by transcribing the audio: directions written into the
+text ("Read this like a real person…", "Say warmly and naturally:") were read aloud in about half the samples,
+and this TTS model rejects a separate instruction. The natural sound comes from the voice choice.
 
 **Speed and rehearsal.** Measured on 2026-10-31: Gemini took ~3–4 s for a first-time line; Argon took 7–17 s (it
 writes the line before speaking it). The tour waits up to 10 s for Gemini and 25 s for Argon before the browser voice

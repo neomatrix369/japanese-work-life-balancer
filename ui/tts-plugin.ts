@@ -27,6 +27,42 @@ export const DEFAULT_MODEL_ID = 'eleven_multilingual_v2'; // says Japanese names
 export const DEFAULT_GEMINI_VOICE = 'Aoede'; // breezy, natural long-form voice
 export const DEFAULT_GEMINI_TTS_MODEL = 'gemini-3.8-flash-tts';
 export const DEFAULT_GEMINI_ARGON_MODEL = 'gemini-4-argon';
+export const DEFAULT_GEMINI_TRANSLATE_MODEL = 'gemini-3.8-flash'; // fast text model for the Japanese voices
+/** Gemini voices offered in Japanese (picked by ear, 2026-10-31). */
+export const GEMINI_JA_VOICES: readonly string[] = ['Sulafat', 'Achird'];
+
+/*
+ * No "speak like a person" direction is sent with the text. Tested 2026-10-31 by transcribing the audio:
+ * in-text directions ("Read this like a real person…: ", "Say warmly and naturally: ") were read aloud in
+ * 3 of 6 and 3 of 4 samples, in English and Japanese, and gemini-3.8-flash-tts rejects systemInstruction
+ * ("Developer instruction is not enabled"). The natural sound comes from the voice choice instead.
+ */
+
+export interface GeminiVoiceOption {
+  /** Gemini prebuilt voice name; also what the picker sends as `voiceId` */
+  voiceName: string;
+  /** one word for the picker label */
+  style: string;
+}
+
+/** The voices the team picked by ear (2026-10-31). All speak English and Japanese. */
+export const GEMINI_VOICE_OPTIONS: readonly GeminiVoiceOption[] = [
+  { voiceName: 'Aoede', style: 'breezy' },
+  { voiceName: 'Sulafat', style: 'warm' },
+  { voiceName: 'Achernar', style: 'soft' },
+  { voiceName: 'Vindemiatrix', style: 'gentle' },
+  { voiceName: 'Gacrux', style: 'mature' },
+  { voiceName: 'Achird', style: 'friendly' },
+];
+
+/**
+ * A Gemini voice name to use: the requested one if it looks like a voice name (listed, or another
+ * prebuilt voice such as GEMINI_VOICE_NAME=Kore), otherwise the fallback.
+ */
+export function resolveGeminiVoice(id: string | undefined, fallback: string = DEFAULT_GEMINI_VOICE): string {
+  if (id && /^[A-Za-z]{2,24}$/.test(id)) return id;
+  return /^[A-Za-z]{2,24}$/.test(fallback) ? fallback : DEFAULT_GEMINI_VOICE;
+}
 
 export const VOICE_SETTINGS = { stability: 0.6, similarity_boost: 0.8, style: 0.15, use_speaker_boost: true } as const;
 export const MAX_TEXT_CHARS = 600;
@@ -35,13 +71,14 @@ const MAX_BODY_BYTES = 8 * 1024;
 const ELEVENLABS_URL = 'https://api.elevenlabs.io/v1/text-to-speech';
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
-export type VoiceProvider = 'gemini' | 'gemini-argon' | 'elevenlabs' | 'browser';
+export type VoiceProvider = 'gemini' | 'gemini-argon' | 'gemini-ja' | 'elevenlabs' | 'browser';
 
 export interface GeminiConfig {
   apiKey?: string | undefined;
   voiceName?: string | undefined;
   ttsModel?: string | undefined;
   argonModel?: string | undefined;
+  translateModel?: string | undefined;
 }
 
 export interface ElevenLabsConfig {
@@ -108,7 +145,7 @@ export function ttsCacheKey(voiceId: string, modelId: string, text: string, name
     .digest('hex');
 }
 
-const PROVIDERS: readonly VoiceProvider[] = ['elevenlabs', 'gemini', 'gemini-argon', 'browser'];
+const PROVIDERS: readonly VoiceProvider[] = ['elevenlabs', 'gemini', 'gemini-argon', 'gemini-ja', 'browser'];
 
 export function isVoiceProvider(value: unknown): value is VoiceProvider {
   return typeof value === 'string' && (PROVIDERS as readonly string[]).includes(value);
@@ -187,6 +224,55 @@ function rateLimiter(perMinute: number, now: () => number) {
   };
 }
 
+const ARGON_INSTRUCTION =
+  'You are an empathetic workplace wellbeing narrator for a Japanese work-life balance dashboard. Rephrase the input into one or two natural, spoken sentences highlighting human wellbeing, rest, and safety. Do not output markdown, bullet points, or commentary prefixes.';
+
+export const JAPANESE_INSTRUCTION =
+  'Translate the input into natural, spoken Japanese, as a warm narrator explaining a work schedule to a small room. Keep every number and amount exactly. Write names with さん (e.g. Sato-san → 佐藤さん). Output only the Japanese sentences: no romaji, notes, quotes or markdown.';
+
+/**
+ * Ask a Gemini text model to rewrite one line (Argon commentary, or a Japanese translation).
+ * Returns the answer, skipping "thought" parts of thinking models, or null when the call fails.
+ */
+async function geminiRewrite(
+  deps: TtsDeps,
+  headers: Record<string, string>,
+  model: string,
+  instruction: string,
+  text: string,
+  label: string,
+  think = true,
+): Promise<string | null> {
+  try {
+    const res = await deps.fetch(`${GEMINI_API_BASE}/${encodeURIComponent(model)}:generateContent`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: instruction }] },
+        contents: [{ parts: [{ text }] }],
+        // thinking off: translation took ~2.4 s instead of ~11 s (measured 2026-10-31), same quality
+        ...(think ? {} : { generationConfig: { thinkingConfig: { thinkingBudget: 0 } } }),
+      }),
+    });
+    if (!res.ok) {
+      deps.log?.(`[tts] ${label} ${res.status}, speaking the original text`);
+      return null;
+    }
+    const parsed = JSON.parse(await res.text()) as {
+      candidates?: { content?: { parts?: { text?: string; thought?: boolean }[] } }[];
+    };
+    const answer = (parsed.candidates?.[0]?.content?.parts ?? [])
+      .filter((p) => !p.thought && typeof p.text === 'string')
+      .map((p) => p.text)
+      .join(' ')
+      .trim();
+    return answer || null;
+  } catch {
+    deps.log?.(`[tts] ${label} failed, speaking the original text`);
+    return null;
+  }
+}
+
 export function createTtsHandler(
   config: TtsConfig,
   deps: TtsDeps,
@@ -205,6 +291,7 @@ export function createTtsHandler(
     voiceName: config.gemini?.voiceName ?? DEFAULT_GEMINI_VOICE,
     ttsModel: config.gemini?.ttsModel ?? DEFAULT_GEMINI_TTS_MODEL,
     argonModel: config.gemini?.argonModel ?? DEFAULT_GEMINI_ARGON_MODEL,
+    translateModel: config.gemini?.translateModel ?? DEFAULT_GEMINI_TRANSLATE_MODEL,
   };
 
   const defaultProvider = config.defaultProvider ?? pickDefaultProvider(undefined, gemini.apiKey, eleven.apiKey);
@@ -258,15 +345,19 @@ export function createTtsHandler(
       return { status: 200, contentType: 'audio/mpeg', body: audio, cache: 'miss' };
     }
 
-    // Gemini provider (direct or argon-augmented)
-    if (provider === 'gemini' || provider === 'gemini-argon') {
-      const voiceName = parsedReq.voiceId ?? gemini.voiceName ?? DEFAULT_GEMINI_VOICE;
+    // Gemini providers: direct, Argon commentary, or Japanese (translated, then spoken)
+    if (provider === 'gemini' || provider === 'gemini-argon' || provider === 'gemini-ja') {
+      const voiceName = resolveGeminiVoice(parsedReq.voiceId, gemini.voiceName ?? DEFAULT_GEMINI_VOICE);
       const ttsModel = gemini.ttsModel ?? DEFAULT_GEMINI_TTS_MODEL;
       const argonModel = gemini.argonModel ?? DEFAULT_GEMINI_ARGON_MODEL;
+      const translateModel = gemini.translateModel ?? DEFAULT_GEMINI_TRANSLATE_MODEL;
+      // the text model that rewrites the line before it is spoken (none for plain Gemini)
+      const rewrite =
+        provider === 'gemini-argon' ? { model: argonModel, instruction: ARGON_INSTRUCTION, label: 'argon commentary', think: true }
+        : provider === 'gemini-ja' ? { model: translateModel, instruction: JAPANESE_INSTRUCTION, label: 'japanese translation', think: false }
+        : null;
 
-      const key = provider === 'gemini-argon'
-        ? ttsCacheKey(voiceName, `${argonModel}+${ttsModel}`, text, 'gemini-argon')
-        : ttsCacheKey(voiceName, ttsModel, text, 'gemini');
+      const key = ttsCacheKey(voiceName, rewrite ? `${rewrite.model}+${ttsModel}` : ttsModel, text, provider);
       // Key in a header, never in the URL (URLs end up in proxy and server logs).
       const geminiHeaders = { 'Content-Type': 'application/json', 'x-goog-api-key': gemini.apiKey ?? '' };
 
@@ -276,41 +367,10 @@ export function createTtsHandler(
       if (!gemini.apiKey) return json(503, { error: 'tts_not_configured' });
       if (!allow()) return json(429, { error: 'rate_limited' });
 
-      let textToSpeak = text;
-
-      // When Argon mode is active, query gemini-4-argon to produce spoken commentary
-      if (provider === 'gemini-argon') {
-        try {
-          const argonRes = await deps.fetch(`${GEMINI_API_BASE}/${encodeURIComponent(argonModel)}:generateContent`, {
-            method: 'POST',
-            headers: geminiHeaders,
-            body: JSON.stringify({
-              systemInstruction: {
-                parts: [{
-                  text: 'You are an empathetic workplace wellbeing narrator for a Japanese work-life balance dashboard. Rephrase the input into one or two natural, spoken sentences highlighting human wellbeing, rest, and safety. Do not output markdown, bullet points, or commentary prefixes.'
-                }],
-              },
-              contents: [{ parts: [{ text }] }],
-            }),
-          });
-          if (argonRes.ok) {
-            const parsed = JSON.parse(await argonRes.text()) as {
-              candidates?: { content?: { parts?: { text?: string; thought?: boolean }[] } }[];
-            };
-            // Argon is a thinking model: skip any "thought" parts, speak only the answer.
-            const generated = (parsed.candidates?.[0]?.content?.parts ?? [])
-              .filter((p) => !p.thought && typeof p.text === 'string')
-              .map((p) => p.text)
-              .join(' ')
-              .trim();
-            if (generated) textToSpeak = generated;
-          } else {
-            deps.log?.(`[tts] argon commentary ${argonRes.status}, speaking the original text`);
-          }
-        } catch {
-          deps.log?.('[tts] argon commentary step failed, falling back to direct text');
-        }
-      }
+      // If the rewrite fails, the original line is spoken rather than going silent.
+      const textToSpeak = rewrite
+        ? ((await geminiRewrite(deps, geminiHeaders, rewrite.model, rewrite.instruction, text, rewrite.label, rewrite.think)) ?? text)
+        : text;
 
       let res: UpstreamResponse;
       try {
@@ -493,6 +553,7 @@ export function ttsPlugin(): Plugin {
     const geminiVoice = e.GEMINI_VOICE_NAME ?? fileEnv.GEMINI_VOICE_NAME ?? DEFAULT_GEMINI_VOICE;
     const geminiTtsModel = e.GEMINI_TTS_MODEL ?? fileEnv.GEMINI_TTS_MODEL ?? DEFAULT_GEMINI_TTS_MODEL;
     const geminiArgonModel = e.GEMINI_ARGON_MODEL ?? fileEnv.GEMINI_ARGON_MODEL ?? DEFAULT_GEMINI_ARGON_MODEL;
+    const geminiTranslateModel = e.GEMINI_TRANSLATE_MODEL ?? fileEnv.GEMINI_TRANSLATE_MODEL ?? DEFAULT_GEMINI_TRANSLATE_MODEL;
 
     const requestedProvider = e.TTS_PROVIDER ?? fileEnv.TTS_PROVIDER;
     const defaultProvider = pickDefaultProvider(requestedProvider, geminiKey, elevenKey);
@@ -517,10 +578,29 @@ export function ttsPlugin(): Plugin {
         const currentGeminiKey = env().GEMINI_API_KEY ?? fileNow.GEMINI_API_KEY;
         const currentElevenKey = env().ELEVENLABS_API_KEY ?? fileNow.ELEVENLABS_API_KEY;
         const current = pickDefaultProvider(requestedProvider, currentGeminiKey, currentElevenKey);
+        const defaultGemini = resolveGeminiVoice(geminiVoice);
         const providers = [
           { id: 'elevenlabs', label: 'ElevenLabs', voice: elevenVoiceId, configured: !!currentElevenKey },
-          { id: 'gemini', label: 'Gemini', voice: geminiVoice, configured: !!currentGeminiKey },
-          { id: 'gemini-argon', label: 'Gemini Argon', voice: geminiVoice, configured: !!currentGeminiKey },
+          // one entry per Gemini voice; `voice` is what the client sends back as voiceId
+          ...GEMINI_VOICE_OPTIONS.map((o) => ({
+            id: 'gemini',
+            label: `Gemini · ${o.voiceName} (${o.style})`,
+            voice: o.voiceName,
+            configured: !!currentGeminiKey,
+          })),
+          {
+            id: 'gemini-argon',
+            label: `Gemini Argon · ${defaultGemini}`,
+            voice: defaultGemini,
+            configured: !!currentGeminiKey,
+          },
+          // Japanese: each line is translated, then spoken by one of these voices
+          ...GEMINI_JA_VOICES.map((v) => ({
+            id: 'gemini-ja',
+            label: `日本語 · ${v} (${GEMINI_VOICE_OPTIONS.find((o) => o.voiceName === v)?.style ?? 'Japanese'})`,
+            voice: v,
+            configured: !!currentGeminiKey,
+          })),
           { id: 'browser', label: 'Browser voice', voice: null, configured: true },
         ];
         // voiceId = the default provider's voice (kept for older clients)
@@ -543,7 +623,7 @@ export function ttsPlugin(): Plugin {
         handler = createTtsHandler(
           {
             elevenlabs: { apiKey: activeElevenKey, voiceId: elevenVoiceId, modelId: elevenModelId },
-            gemini: { apiKey: activeGeminiKey, voiceName: geminiVoice, ttsModel: geminiTtsModel, argonModel: geminiArgonModel },
+            gemini: { apiKey: activeGeminiKey, voiceName: geminiVoice, ttsModel: geminiTtsModel, argonModel: geminiArgonModel, translateModel: geminiTranslateModel },
             defaultProvider: pickDefaultProvider(requestedProvider, activeGeminiKey, activeElevenKey),
           },
           deps,

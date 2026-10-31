@@ -10,6 +10,7 @@ import {
   DEFAULT_MODEL_ID,
   DEFAULT_VOICE_ID,
   MAX_TEXT_CHARS,
+  JAPANESE_INSTRUCTION,
   createTtsHandler,
   pickDefaultProvider,
   ttsCacheKey,
@@ -263,6 +264,51 @@ describe('POST /tts with Gemini providers', () => {
     expect(ok.fetch.mock.calls[0][0]).toMatch(/gemini-4-argon:generateContent$/);
     expect(sentBody(ok.fetch, 1).contents[0].parts[0].text).toBe('Sato-san gets two days of rest.');
     expect(sentBody(down.fetch, 1).contents[0].parts[0].text).toBe('Sato-san: 2 rest days.');
+  });
+
+  it('speaks exactly the line (no added direction) in the picked Gemini voice, and ignores junk voice names', async () => {
+    /**
+     * Scenario: the presenter picks "Gemini · Sulafat (warm)".
+     * Slice: Gemini voice options.
+     * Given a Gemini key, when Sulafat and a junk voice id are asked for the same line, then Sulafat
+     * speaks it, the junk id falls back to Aoede, and only the line itself is sent (in-text directions
+     * were read aloud in testing, so none is added).
+     */
+    // -- Given --
+    const { handle, fetch } = geminiSetup(async () => geminiAudio());
+    const line = 'Rest matters.';
+    // -- When --
+    await handle({ text: line, provider: 'gemini', voiceId: 'Sulafat' });
+    await handle({ text: line, provider: 'gemini', voiceId: 'x y!' });
+    // -- Then --
+    const voice = (i: number) => sentBody(fetch, i).generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName;
+    const spoken = (i: number) => sentBody(fetch, i).contents[0].parts[0].text;
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect([voice(0), spoken(0)]).toEqual(['Sulafat', line]);
+    expect([voice(1), spoken(1)]).toEqual(['Aoede', line]);
+  });
+
+  it('for a Japanese voice, translates the line with the fast text model, then speaks the Japanese', async () => {
+    /**
+     * Scenario: the presenter picks "日本語 · Sulafat (warm)".
+     * Slice: Japanese voices.
+     * Given a Gemini key, when a line is asked for in gemini-ja with Sulafat, then the translate model
+     * gets the line with the Japanese instruction, and Sulafat speaks the translation; when the
+     * translation fails, the original line is spoken instead of going silent.
+     */
+    // -- Given --
+    const ok = geminiSetup(async (url) => (url.includes('flash-tts') ? geminiAudio() : argonText('佐藤さんは二日間休みます。')));
+    const down = geminiSetup(async (url) => (url.includes('flash-tts') ? geminiAudio() : upstream(500, '{}')));
+    // -- When --
+    const r = await ok.handle({ text: 'Sato-san gets 2 days off.', provider: 'gemini-ja', voiceId: 'Sulafat' });
+    await down.handle({ text: 'Sato-san gets 2 days off.', provider: 'gemini-ja', voiceId: 'Sulafat' });
+    // -- Then --
+    expect(r).toMatchObject({ status: 200, contentType: 'audio/wav' });
+    expect(ok.fetch.mock.calls[0][0]).toMatch(/gemini-3\.8-flash:generateContent$/);
+    expect(sentBody(ok.fetch, 0).systemInstruction.parts[0].text).toBe(JAPANESE_INSTRUCTION);
+    expect(sentBody(ok.fetch, 1).contents[0].parts[0].text).toBe('佐藤さんは二日間休みます。');
+    expect(sentBody(ok.fetch, 1).generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName).toBe('Sulafat');
+    expect(sentBody(down.fetch, 1).contents[0].parts[0].text).toBe('Sato-san gets 2 days off.');
   });
 
   it('answers 503 for a Gemini request when there is no Gemini key', async () => {

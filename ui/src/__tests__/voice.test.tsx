@@ -31,8 +31,10 @@ const PROVIDERS: ProviderOption[] = [
 ];
 const providerState = (over: Partial<VoiceProviderState> = {}): VoiceProviderState => ({
   provider: 'elevenlabs',
+  selected: 'elevenlabs',
   providers: PROVIDERS,
   setProvider: vi.fn(),
+  select: vi.fn(),
   ...over,
 });
 
@@ -324,6 +326,8 @@ function controllableNarrator() {
     provider: SILENT_NARRATOR.provider,
     providers: SILENT_NARRATOR.providers,
     setProvider: vi.fn(),
+    selected: SILENT_NARRATOR.selected,
+    select: vi.fn(),
     subscribe: () => () => undefined,
   };
   return { narrator, finishLine: () => finish?.() };
@@ -442,13 +446,13 @@ describe('TourOverlay voice control', () => {
      * browser voice, then setProvider gets "browser" and the Gemini option is disabled.
      */
     // -- Given --
-    const setProvider = vi.fn();
+    const select = vi.fn();
     const voice = {
       muted: false,
       toggleMute: () => undefined,
       browserVoice: false,
       voiceId: 'Lily',
-      voiceProvider: providerState({ setProvider }),
+      voiceProvider: providerState({ select }),
       spoken: () => Promise.resolve(),
     };
     render(
@@ -475,7 +479,7 @@ describe('TourOverlay voice control', () => {
     // -- When --
     fireEvent.change(picker, { target: { value: 'browser' } });
     // -- Then --
-    expect(setProvider).toHaveBeenCalledWith('browser');
+    expect(select).toHaveBeenCalledWith('browser');
     expect(screen.getByRole('option', { name: /Gemini · Aoede \(no key\)/ })).toBeDisabled();
   });
 });
@@ -522,6 +526,30 @@ describe('narrator voice provider', () => {
     // -- Then --
     expect(fetch).not.toHaveBeenCalled();
     expect(speech.spoken.map((u) => u.text)).toEqual(['Offline line.']);
+  });
+
+  it('sends the picked Gemini voice with each line, even before the voice list has loaded', async () => {
+    /**
+     * Scenario: the presenter picked "Gemini · Sulafat (warm)" last time; GET /tts has not answered yet.
+     * Slice: Gemini voice options — narrator.
+     * Given a stored "gemini|Sulafat" choice, when a line is spoken, then the POST names provider
+     * "gemini" and voiceId "Sulafat", and the picker value stays "gemini|Sulafat".
+     */
+    // -- Given --
+    const fetch = vi.fn(async () => audioResponse());
+    const { narrator: first, storage } = narratorWith(fetch as unknown as NarratorDeps['fetch']);
+    first.select('gemini|Sulafat');
+    const { narrator, audio } = narratorWith(fetch as unknown as NarratorDeps['fetch'], { storage });
+    // -- When --
+    const p = narrator.speak('Rest matters.');
+    await flush();
+    audio.onended?.(new Event('ended'));
+    await p;
+    // -- Then --
+    const body = JSON.parse((fetch.mock.calls[0] as unknown as [string, RequestInit])[1].body as string);
+    expect(body).toEqual({ text: 'Rest matters.', provider: 'gemini', voiceId: 'Sulafat' });
+    expect(narrator.selected()).toBe('gemini|Sulafat');
+    expect(narrator.provider()).toBe('gemini');
   });
 
   it('waits longer for Gemini Argon than for ElevenLabs before falling back', async () => {
