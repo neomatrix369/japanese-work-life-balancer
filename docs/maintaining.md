@@ -16,16 +16,14 @@ Timefold accounts see [external-services.md](external-services.md).
 
 ## Ports and stale processes
 
-`make demo` writes logs to `.logs/model.log`, `.logs/ui.log` and `.logs/mcp.log`. Its start-up banner always says
-`http://localhost:5173`, but if an old Vite is still holding 5173 the new one silently moves to 5174, and the old tab
-shows "Model not running" (its `/api` proxy is dead). Check the real URL with:
+`make demo` writes logs to `.logs/model.log`, `.logs/ui.log` and `.logs/mcp.log`. Before starting, it checks
+:8083, :5173 and :8765; if any is busy it prints the PID and command holding it and exits, rather than starting a
+second UI on :5174 next to a stale backend. Vite also runs with `strictPort`. Ctrl-C stops the whole process tree
+(`npm`/`mvn`/`uv` *and* the vite/java/python servers they start, which used to be left behind).
 
-```bash
-grep -m1 Local: .logs/ui.log
-lsof -nP -iTCP:5173 -iTCP:5174 -iTCP:8083 -iTCP:8765 -sTCP:LISTEN
-```
-
-Stop leftovers with `lsof -ti :5173 | xargs kill` (likewise 5174, 8083, 8765) and start `make demo` again.
+`make stop` frees all three ports. Two copies usually mean a second `make demo` from another terminal or IDE
+(for example Antigravity) in the same folder. Find who started one with `ps -o pid,ppid,lstart,command -p <PID>`,
+following the parent PIDs up the chain.
 
 ## Before merging a UI change
 

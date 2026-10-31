@@ -197,6 +197,8 @@ make ui      # start Vite on :5173     (keep running)
 make mcp     # start MCP server on :8765 (keep running)
 make test    # run model unit tests (model must NOT be running with quarkus:dev)
 make clean   # remove build outputs and data-gen/out/
+make stop    # stop anything left on :8083, :5173, :8765
+make warm-voice [PROVIDER=gemini]   # pre-record the tour's fixed lines (UI running)
 ```
 
 </details>
@@ -521,8 +523,8 @@ lsof -ti :5173 | xargs kill   # ui
 lsof -ti :8765 | xargs kill   # mcp
 ```
 
-If an old `make demo` is still holding `:5173`, Vite starts the new UI on the next free port (e.g. `:5174`) and
-the old tab keeps showing "Model not running". Check `.logs/ui.log` for the `Local:` URL, or stop the old process.
+If an old `make demo` (or one from another terminal/IDE) still holds a port, `make demo` names the process and
+exits instead of starting a second copy. `make stop` frees :8083, :5173 and :8765.
 
 </details>
 

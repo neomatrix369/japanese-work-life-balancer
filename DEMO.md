@@ -15,13 +15,14 @@ Services at a glance: UI on :5173, model REST API on :8083, MCP server on :8765.
 
 **Five-minute pre-flight** (do this before the audience arrives):
 
-- [ ] The UI really is on 5173: `grep -m1 Local: .logs/ui.log`. If it says 5174, an old Vite is still running;
-      see [maintaining.md → Ports](docs/maintaining.md#ports-and-stale-processes).
+- [ ] Only one copy is running: `make demo` refuses to start if :8083/:5173/:8765 are busy; `make stop` clears
+      them ([maintaining.md → Ports](docs/maintaining.md#ports-and-stale-processes)).
 - [ ] Voice: pick the narrator in the top-bar **Voice** dropdown; `.logs/ui.log` shows `elevenLabsKey=present` and/or
       `geminiKey=present` for the voices you plan to use.
       No key is fine; the tour falls back to the browser voice ([setup](docs/external-services.md#elevenlabs-premium-tour-voice)).
-- [ ] Play the tour once end to end **with the voice you will demo** (Gemini Argon is slow the first time). The fixed lines are then cached in `ui/.tts-cache/`, so the live run starts
-      instantly and uses little quota. Lines that read live numbers ("Right now: 22 people at risk…") change with
+- [ ] `make warm-voice PROVIDER=<the voice you will demo>` pre-records the 6 fixed lines (paced to stay under the
+      Gemini per-minute limit), so the tour opens instantly. If Gemini is rate limited mid-tour, the browser voice
+      covers for the few seconds Gemini asks for and the chosen voice then comes back by itself, with no refresh needed. Lines that read live numbers ("Right now: 22 people at risk…") change with
       every solve, so they still go to the chosen voice provider.
 - [ ] Sound on, the correct output device chosen, and the browser tab not muted.
 
