@@ -19,7 +19,9 @@ Services at a glance: UI on :5173, model REST API on :8083, MCP server on :8765.
       them ([maintaining.md → Ports](docs/maintaining.md#ports-and-stale-processes)).
 - [ ] Voice: pick the narrator in the top-bar **Voice** dropdown; `.logs/ui.log` shows `elevenLabsKey=present` and/or
       `geminiKey=present` for the voices you plan to use.
-      No key is fine; the tour falls back to the browser voice ([setup](docs/external-services.md#elevenlabs-premium-tour-voice)).
+      No key is fine; the tour falls back to the browser voice. To add keys: `cp ui/.env.example ui/.env.local`
+      ([ElevenLabs](docs/external-services.md#elevenlabs-premium-tour-voice) ·
+      [Gemini](docs/external-services.md#gemini-tour-voices) setup).
 - [ ] `make warm-voice PROVIDER=<the voice you will demo>` pre-records the 6 fixed lines (paced to stay under the
       Gemini per-minute limit), so the tour opens instantly. If Gemini is rate limited mid-tour, the browser voice
       covers for the few seconds Gemini asks for and the chosen voice then comes back by itself, with no refresh needed. Lines that read live numbers ("Right now: 22 people at risk…") change with

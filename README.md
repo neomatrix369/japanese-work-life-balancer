@@ -55,6 +55,10 @@ copy-paste installs for macOS and Linux (Ubuntu/Debian), then come back here.
 No accounts are needed: the solver runs on Timefold's free Community Edition and the tour uses your browser's
 voice. For the premium ElevenLabs or Gemini narrators, or Timefold Enterprise, see [external services](docs/external-services.md).
 
+**Optional narrator voices:** `cp ui/.env.example ui/.env.local`, paste an
+[ElevenLabs key](https://elevenlabs.io/app/api/api-keys) and/or a [Gemini key](https://aistudio.google.com/apikey),
+then restart `make demo`. `make check` tells you which keys it found.
+
 ---
 
 ## Screenshots
@@ -175,7 +179,8 @@ an older Maven sits earlier on your `PATH`. Install commands for macOS and Linux
 **Optional services** (each has a free option and a fallback, so the app runs without them):
 
 - **ElevenLabs** — the premium narrator voice for the tour. Needs an API key in `ui/.env.local`.
-- **Gemini** — two more tour voices (Gemini TTS, and Gemini Argon commentary), picked from the **Voice** dropdown. Needs `GEMINI_API_KEY`.
+- **Gemini** — six more tour voices, Gemini Argon wellbeing commentary and two Japanese voices, picked from the
+  **Voice** dropdown. Needs `GEMINI_API_KEY` in `ui/.env.local`.
 - **Timefold Enterprise** — exact match counts in *Broken constraints*. Needs a license and `make demo ENTERPRISE=1`;
   a license has no effect on the default Community build.
 
@@ -286,11 +291,22 @@ Voices without a key show "(no key)" and can't be picked. **Rehearse once per vo
 line is cached on disk, so the second run plays instantly (Argon's first run is slow because it writes each line).
 Gemini set-up: **[docs/external-services.md → Gemini](docs/external-services.md#gemini-tour-voices)**.
 
-**Set-up in one minute.** Create an API key on the [ElevenLabs API keys page](https://elevenlabs.io/app/api/api-keys)
-with the **Text to Speech** permission, then put it in `ui/.env.local` (git-ignored) and restart `make demo`:
+**Voice status.** Next to 🔊 the tour shows "Preparing voice…" with dots while a line loads, then a small sound
+wave and the voice's name while it talks. If a service is rate limited, it shows e.g. "Gemini busy · browser voice
+for 12 s" and switches back by itself.
+
+**Set-up in one minute.** Copy the template, add one or both keys, and restart `make demo`:
+
+- ElevenLabs: create a key on the [API keys page](https://elevenlabs.io/app/api/api-keys) with the **Text to Speech** permission.
+- Gemini: create a key in [Google AI Studio](https://aistudio.google.com/apikey).
+
+```bash
+cp ui/.env.example ui/.env.local   # git-ignored
+```
 
 ```dotenv
 ELEVENLABS_API_KEY=sk_your_key_here
+GEMINI_API_KEY=your_gemini_key_here
 ```
 
 Account creation, key permissions, choosing a voice from the [Voice Library](https://elevenlabs.io/app/voice-library),
