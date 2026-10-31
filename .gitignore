@@ -1,6 +1,7 @@
 model/target/
 ui/node_modules
 ui/dist/
+ui/coverage/
 mcp/.venv/
 data-gen/.venv/
 data-gen/out/
