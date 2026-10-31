@@ -206,9 +206,10 @@ make clean   # remove build outputs and data-gen/out/
 
 ### Guided tour
 
-Click **▶ Play demo** (top bar, next to the title) to run a hands-free 19-step story through the app.
-The tour solves `burnout` (cost-first then health-first) and `overloaded` live with a 10-second time limit;
-if the model is not reachable it falls back to recorded results automatically.
+Click **▶ Play demo** (top bar, next to the title) to run a hands-free 20-step story through the app.
+It opens with a quick background on how the system works (the About modal), then solves `burnout` cost-first
+and health-first, walks each day of the week, and finishes with the overloaded scenario and the HR view.
+Solves run live with a 10-second limit; if the model is not reachable it falls back to recorded results.
 Keyboard: **Space** pause/resume, **← →** back/next, **Esc** exit.
 
 ### Dashboard walkthrough

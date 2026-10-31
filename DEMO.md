@@ -29,8 +29,9 @@ Services at a glance: UI on :5173, model REST API on :8083, MCP server on :8765.
 ## Step 0 — Guided tour option (about 3–4 min, replaces Steps 2–4)
 
 If you prefer a fully hands-free run, click **▶ Play demo** in the top bar.
-The tour walks through all 6 story beats automatically (19 steps): it solves `burnout` cost-first then health-first
-(live, 10-second limit) and `overloaded`, narrates each result, and ends on the longevity view.
+The tour walks through all 7 story beats automatically (20 steps): it opens with a background overview
+(About modal), solves `burnout` cost-first then health-first (live, 10-second limit) and `overloaded`,
+narrates each result, and ends on the longevity view.
 It falls back to recorded results if the model is unreachable.
 Use **Space** to pause, **← →** to step back or forward, **Esc** to exit.
 
