@@ -4,11 +4,11 @@
   "shiftStart": "09:00",
   "shiftEnd": "17:00",
   "publicHolidays": [],
-  "retention": {
-    "year1": 0.88,
-    "year3": 0.74,
-    "year5": 0.63
-  },
+  "leavers": [
+    { "id": "L-001", "leftAfterYears": 0.4 },
+    { "id": "L-002", "leftAfterYears": 2.5 },
+    { "id": "L-003", "leftAfterYears": 6.0 }
+  ],
   "employees": [
     {
       "id": "E-001",

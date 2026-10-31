@@ -476,7 +476,9 @@ These simplifications were deliberate choices for the hackathon build:
 - **No persistence.** Solve jobs live in memory; restarting the model clears them.
 - **No authentication.** The role selector (Manager / HR / Executive) is a UI widget only; there is no login or access control.
 - **Fixed FX rates.** Currency conversion uses hardcoded rates (1 USD = 150 JPY, 1 GBP = 195 JPY), labelled "indicative" in the UI.
-- **Invented retention figures.** Company retention data (`year1: 0.88, year3: 0.74, year5: 0.63`) is synthetic.
+- **Retention computed from a synthetic leaver history.** Each scenario carries `leavers` (years served before leaving). The model
+  combines them with current staff tenure into a Kaplan–Meier retention curve (year 1 / 3 / 5). Teams arriving on 3+ day streaks
+  lose more people in year one, so `burnout` shows 83 / 81 / 78% against `normal` at 96 / 93 / 86%. Inputs without `leavers` report no retention.
 - **Shifts are derived, not planned.** The solver assigns tasks to employees; a "shift" is derived as any day on which an employee has at least one task. The PRD described shifts as separate planned entities.
 - **KPIs computed post-solve.** Shadow variables from the PRD (idle hours, labor cost, etc.) are calculated in plain Java after solving, not as Timefold shadow variables.
 - **Health added as a soft constraint.** The PRD listed consecutive-day health metrics as reporting only; this build adds `Consecutive days risk` as a soft constraint (weight 10 in `health-first`, 0 in `cost-first`). The constraint also adds a one-off per-person charge for employees whose run reaches 3+ days, which directly reduces the at-risk headcount KPI — the exact charge value is documented in [model/README.md](model/README.md).

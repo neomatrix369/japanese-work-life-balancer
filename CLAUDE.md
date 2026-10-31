@@ -74,6 +74,8 @@ japanese-work-life-balancer/
 - **Scenarios retuned:** `normal` targets ~50% load, `burnout` ~55% with ~30% of staff carrying in 2–5 days.
   Original spec (65% / 85%) produced identical at-risk counts under both presets. Generator is seeded; exact counts
   are printed at runtime and documented in `README.md → Scenarios`.
+- **Retention is computed, not invented:** scenarios carry a synthetic `leavers` history; `Retention.fromHistory`
+  (Kaplan–Meier over staff tenure + leavers) fills `longevity.retention`. No `leavers` → `retention: null`.
 
 ## Conventions
 

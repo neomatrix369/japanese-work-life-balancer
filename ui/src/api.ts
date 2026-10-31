@@ -52,6 +52,11 @@ export interface Task {
   pinned: boolean;
 }
 
+export interface Leaver {
+  id: string;                   // L-001
+  leftAfterYears: number;
+}
+
 export interface RetentionData {
   year1: number;
   year3: number;
@@ -64,7 +69,7 @@ export interface WorkSchedule {
   shiftStart: string;           // HH:mm, typically 09:00
   shiftEnd: string;             // HH:mm, typically 17:00
   publicHolidays: string[];     // ISO dates
-  retention: RetentionData;
+  leavers?: Leaver[] | null;    // history used to compute retention
   employees: Employee[];
   tasks: Task[];
   score: string | null;
@@ -168,7 +173,7 @@ export interface LongevityData {
   avgTenureYears: number;
   totalUnplannedAbsenceDays: number;
   avgUnplannedAbsenceDays: number;
-  retention: RetentionData;
+  retention: RetentionData | null;  // null when the input has no leaver history
   // NOTE: per-employee longevity fields (tenureYears, unplannedAbsenceDays3m) live in
   // the top-level perEmployee[] array, NOT here. LongevityPerEmployee is kept for
   // backwards compat but is no longer returned inside this object.

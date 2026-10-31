@@ -136,7 +136,7 @@ Point to the output — the same numbers, now in natural language.
 1. Back in the browser, switch **Role** → `HR`.
 2. Scroll to the **Longevity view** panel.
 3. Point to average tenure (`11.5` years), total unplanned absences in 3 months
-   (`90`), and retention rates (year 1: 88%, year 3: 74%, year 5: 63%).
+   (`90`), and retention rates (year 1: 83%, year 3: 81%, year 5: 78%), computed from staff tenure and leaver history.
 
 > *"This week's plan is the short-term lever. The long-term question is: are people staying? Are absences trending up? HR and executives see these numbers next to the weekly plan. The connection between this week's schedule and whether someone is still here in three years is made explicit."*
 

@@ -171,9 +171,9 @@ describe('longevity', () => {
   });
 
   it('has retention rates', () => {
-    expect(sample.longevity.retention.year1).toBeCloseTo(0.88);
-    expect(sample.longevity.retention.year3).toBeCloseTo(0.74);
-    expect(sample.longevity.retention.year5).toBeCloseTo(0.63);
+    expect(sample.longevity.retention?.year1).toBeCloseTo(0.909);
+    expect(sample.longevity.retention?.year3).toBeCloseTo(0.795);
+    expect(sample.longevity.retention?.year5).toBeCloseTo(0.795);
   });
 });
 

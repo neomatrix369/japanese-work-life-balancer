@@ -96,6 +96,7 @@ TASK_TEMPLATES: dict[str, list[str]] = {
 SHIFT_START_MIN = 9 * 60   # 09:00
 SHIFT_END_MIN   = 17 * 60  # 17:00
 SHIFT_MINUTES   = SHIFT_END_MIN - SHIFT_START_MIN  # 480
+LEAVERS_PER_EMPLOYEE = 0.5  # leavers history size relative to current headcount
 
 
 def fmt_date(d: date) -> str:
@@ -391,6 +392,31 @@ def add_approved_holidays(
             emp["approvedHolidays"].append(d_str)
 
 
+def strained_share(employees: list[dict]) -> float:
+    """Share of staff arriving on a 3+ day streak (the health constraint's at-risk threshold)."""
+    if not employees:
+        return 0.0
+    return sum(1 for e in employees if e["consecutiveDaysBeforeWeek"] >= 3) / len(employees)
+
+
+def make_leavers(rng: random.Random, employees: list[dict]) -> list[dict]:
+    """Synthetic history of people who left, as years served before leaving.
+
+    Strained workforces lose more people in their first year. Together with current staff tenure
+    this lets the model compute retention (Kaplan–Meier) instead of using invented figures.
+    """
+    early_share = min(0.7, 0.10 + 2.0 * strained_share(employees))
+    return [
+        {
+            "id":             f"L-{i + 1:03d}",
+            "leftAfterYears": round(
+                rng.uniform(0.1, 1.0) if rng.random() < early_share else rng.uniform(1.0, 12.0), 1
+            ),
+        }
+        for i in range(round(len(employees) * LEAVERS_PER_EMPLOYEE))
+    ]
+
+
 # ---------------------------------------------------------------------------
 # Task generation
 # ---------------------------------------------------------------------------
@@ -667,6 +693,7 @@ def build_schedule(
     employees: list[dict],
     tasks: list[dict],
     public_holidays: list[date],
+    leavers: list[dict],
 ) -> dict:
     return {
         "name":           name,
@@ -674,8 +701,7 @@ def build_schedule(
         "shiftStart":     "09:00",
         "shiftEnd":       "17:00",
         "publicHolidays": [fmt_date(d) for d in public_holidays],
-        # MOCK: invented company retention figures
-        "retention":      {"year1": 0.88, "year3": 0.74, "year5": 0.63},
+        "leavers":        leavers,
         "employees":      employees,
         "tasks":          tasks,
     }
@@ -792,7 +818,7 @@ def main() -> None:
     os.makedirs(args.out, exist_ok=True)
 
     base_rng = random.Random(args.seed)
-    seeds = [base_rng.randint(0, 2**31) for _ in range(10)]
+    seeds = [base_rng.randint(0, 2**31) for _ in range(10)]  # 0–4 scenarios, 5–9 leavers history
 
     WEEK_A = date(2026, 11, 9)   # Mon — tiny, normal, overloaded, burnout
     WEEK_H = date(2026, 11, 2)   # Mon — holiday week
@@ -806,7 +832,8 @@ def main() -> None:
         target_ratio=0.60,
         ensure_no_unassigned=True,
     )
-    tiny = build_schedule("tiny", WEEK_A, emps_tiny, tasks_tiny, [])
+    tiny = build_schedule("tiny", WEEK_A, emps_tiny, tasks_tiny, [],
+                          make_leavers(random.Random(seeds[5]), emps_tiny))
 
     # ----- 2. normal -----
     rng = random.Random(seeds[1])
@@ -817,7 +844,8 @@ def main() -> None:
         pinned_count=3,
         ensure_no_unassigned=True,
     )
-    normal = build_schedule("normal", WEEK_A, emps_norm, tasks_norm, [])
+    normal = build_schedule("normal", WEEK_A, emps_norm, tasks_norm, [],
+                            make_leavers(random.Random(seeds[6]), emps_norm))
 
     # ----- 3. overloaded -----
     rng = random.Random(seeds[2])
@@ -828,7 +856,8 @@ def main() -> None:
         ensure_no_unassigned=False,
         ensure_eligible=True,          # every task has a valid employee, just not enough capacity
     )
-    overloaded = build_schedule("overloaded", WEEK_A, emps_over, tasks_over, [])
+    overloaded = build_schedule("overloaded", WEEK_A, emps_over, tasks_over, [],
+                                make_leavers(random.Random(seeds[7]), emps_over))
 
     # ----- 4. holiday -----
     rng = random.Random(seeds[3])
@@ -842,7 +871,8 @@ def main() -> None:
         include_public_holiday_tasks=True,
         n_holiday_tasks=20,
     )
-    holiday = build_schedule("holiday", WEEK_H, emps_hol, tasks_hol, [CULTURE_DAY])
+    holiday = build_schedule("holiday", WEEK_H, emps_hol, tasks_hol, [CULTURE_DAY],
+                             make_leavers(random.Random(seeds[8]), emps_hol))
 
     # ----- 5. burnout -----
     # 30% of staff with 2–5 days carry-in; load ~0.55 of total capacity so that
@@ -854,7 +884,8 @@ def main() -> None:
         target_ratio=0.55,
         ensure_no_unassigned=True,
     )
-    burnout = build_schedule("burnout", WEEK_A, emps_burn, tasks_burn, [])
+    burnout = build_schedule("burnout", WEEK_A, emps_burn, tasks_burn, [],
+                             make_leavers(random.Random(seeds[9]), emps_burn))
 
     # ----- Write + summarise -----
     scenarios = [

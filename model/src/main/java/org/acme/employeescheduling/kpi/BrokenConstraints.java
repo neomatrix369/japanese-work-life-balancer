@@ -96,7 +96,7 @@ public final class BrokenConstraints {
         c.setShiftStart(s.getShiftStart());
         c.setShiftEnd(s.getShiftEnd());
         c.setPublicHolidays(s.getPublicHolidays());
-        c.setRetention(s.getRetention());
+        c.setLeavers(s.getLeavers());
         c.setEmployees(s.getEmployees());
         c.setTasks(s.getTasks());
         return c;
