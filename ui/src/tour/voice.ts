@@ -10,6 +10,9 @@
 
 export type VoiceKind = 'premium' | 'browser' | 'none';
 
+/** What the narrator is doing now: waiting for server audio, talking, or quiet. */
+export type VoiceStatus = 'idle' | 'preparing' | 'speaking';
+
 /** Same ids as the server's `VoiceProvider` in tts-plugin.ts. */
 export type VoiceProvider = 'elevenlabs' | 'gemini' | 'gemini-argon' | 'gemini-ja' | 'browser';
 
@@ -62,6 +65,10 @@ export interface Narrator {
   unlock(): void;
   /** which voice spoke the latest line */
   voice(): VoiceKind;
+  /** 'preparing' while server audio is being fetched, 'speaking' while a line plays, else 'idle' */
+  status(): VoiceStatus;
+  /** ms left before the premium voice is tried again after a 429 (0 when not rate limited) */
+  limitedForMs(): number;
   /** voice ID/name of the active provider on the server (null until fetched or when unavailable) */
   voiceId(): string | null;
   /** the provider in use: the user's choice, else the server's default */
@@ -89,6 +96,8 @@ export const SILENT_NARRATOR: Narrator = {
   isMuted: () => true,
   unlock: () => undefined,
   voice: () => 'none',
+  status: () => 'idle',
+  limitedForMs: () => 0,
   voiceId: () => null,
   provider: () => 'browser',
   providers: () => FALLBACK_PROVIDERS,
@@ -292,9 +301,18 @@ export function createNarrator(overrides: Partial<NarratorDeps> = {}): Narrator 
   let audioPlaying = false;
   let kind: VoiceKind = 'none';
   let serverOffUntil = 0;
+  /** end of a back-off set by a 429 (kept apart from generic failures, which say nothing about quota) */
+  let limitedUntil = 0;
+  let status: VoiceStatus = 'idle';
   let activeVoiceId: string | null = null;
   const urls = new Map<string, Promise<string | null>>();
+  /** cache keys whose audio URL has arrived (a hit plays at once: no "preparing") */
+  const ready = new Set<string>();
   const listeners = new Set<() => void>();
+  const clearBackoff = () => {
+    serverOffUntil = 0;
+    limitedUntil = 0;
+  };
 
   // Fetch the server's active voice config once on init for display in the UI.
   if (d.fetch) {
@@ -314,7 +332,7 @@ export function createNarrator(overrides: Partial<NarratorDeps> = {}): Narrator 
         }
         // Server is reachable and config may have changed (e.g. new API key in .env.local) —
         // clear any stale backoff so the next POST actually tries.
-        serverOffUntil = 0;
+        clearBackoff();
         listeners.forEach((fn) => fn());
       }
     }).catch(() => undefined);
@@ -325,16 +343,26 @@ export function createNarrator(overrides: Partial<NarratorDeps> = {}): Narrator 
     kind = k;
     listeners.forEach((fn) => fn());
   };
+  const setStatus = (s: VoiceStatus) => {
+    if (s === status) return;
+    status = s;
+    listeners.forEach((fn) => fn());
+  };
   const getAudio = () => (audio ??= d.createAudio?.() ?? null);
+  const urlKey = (line: string) => `${selectedKey()}\n${line}`;
+  const canAskServer = (line: string) =>
+    currentProvider() !== 'browser' && !!d.fetch && line.length <= MAX_SERVER_CHARS && d.now() >= serverOffUntil;
+  /** true when speaking this line means waiting on the server (not cached, not skipped) */
+  const mustWait = (line: string) => !ready.has(urlKey(line)) && (urls.has(urlKey(line)) || canAskServer(line));
 
   function audioUrl(line: string): Promise<string | null> {
     const provider = currentProvider();
     if (provider === 'browser') return Promise.resolve(null);
-    const cacheKey = `${selectedKey()}\n${line}`;
+    const cacheKey = urlKey(line);
     const hit = urls.get(cacheKey);
     if (hit) return hit;
-    if (!d.fetch || line.length > MAX_SERVER_CHARS || d.now() < serverOffUntil) return Promise.resolve(null);
     const fetchFn = d.fetch;
+    if (!fetchFn || !canAskServer(line)) return Promise.resolve(null);
     const p = (async () => {
       try {
         const res = await fetchFn('/tts', {
@@ -353,6 +381,8 @@ export function createNarrator(overrides: Partial<NarratorDeps> = {}): Narrator 
         const wait = await retryAfterMs(res);
         if (wait !== null) {
           serverOffUntil = d.now() + Math.min(d.retryAfterMs, Math.max(MIN_RATE_LIMIT_BACKOFF_MS, wait));
+          limitedUntil = serverOffUntil;
+          listeners.forEach((fn) => fn());
           return null;
         }
       } catch {
@@ -363,7 +393,8 @@ export function createNarrator(overrides: Partial<NarratorDeps> = {}): Narrator 
     })();
     urls.set(cacheKey, p);
     void p.then((u) => {
-      if (!u) urls.delete(cacheKey);
+      if (u) ready.add(cacheKey);
+      else urls.delete(cacheKey);
     });
     return p;
   }
@@ -444,14 +475,21 @@ export function createNarrator(overrides: Partial<NarratorDeps> = {}): Narrator 
       const line = toSpeech(text);
       if (muted || !line) return;
       const mine = token;
+      if (mustWait(line)) setStatus('preparing');
       const url = await withTimeout(audioUrl(line), d.providerTimeoutMs[currentProvider()] ?? d.timeoutMs);
       if (mine !== token) return;
+      setStatus('speaking');
       if (url) {
         setKind('premium');
-        if (await playUrl(url, line)) return;
+        const played = await playUrl(url, line);
         if (mine !== token) return;
+        if (played) {
+          setStatus('idle');
+          return;
+        }
       }
       await speakBrowser(line);
+      if (mine === token) setStatus('idle');
     },
     prefetch(text) {
       const line = toSpeech(text);
@@ -464,6 +502,7 @@ export function createNarrator(overrides: Partial<NarratorDeps> = {}): Narrator 
       const f = finishCurrent;
       finishCurrent = null;
       f?.();
+      setStatus('idle');
     },
     pause() {
       audio?.pause();
@@ -495,6 +534,8 @@ export function createNarrator(overrides: Partial<NarratorDeps> = {}): Narrator 
       }
     },
     voice: () => kind,
+    status: () => status,
+    limitedForMs: () => Math.max(0, limitedUntil - d.now()),
     voiceId: () => (chosen ? (chosenOption()?.voice ?? null) : activeVoiceId),
     provider: currentProvider,
     providers: () => providerList,
@@ -505,7 +546,7 @@ export function createNarrator(overrides: Partial<NarratorDeps> = {}): Narrator 
     select(key) {
       if (!providerOf(key) || key === chosen) return;
       chosen = key;
-      serverOffUntil = 0; // a failure on the old voice says nothing about the new one
+      clearBackoff(); // a failure on the old voice says nothing about the new one
       try {
         d.storage?.setItem(PROVIDER_STORAGE_KEY, key);
       } catch {

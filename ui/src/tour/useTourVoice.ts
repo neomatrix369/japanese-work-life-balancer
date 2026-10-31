@@ -5,7 +5,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { NarrationCtx, TourStep } from './steps';
-import { toSpeech, unspokenTail, type Narrator } from './voice';
+import { toSpeech, unspokenTail, type Narrator, type VoiceStatus } from './voice';
 import { useVoiceProvider, type VoiceProviderState } from './useVoiceProvider';
 
 export interface TourVoice {
@@ -19,6 +19,10 @@ export interface TourVoice {
   voiceProvider: VoiceProviderState;
   /** resolves when the current step's line has been spoken (or skipped / stopped) */
   spoken: () => Promise<void>;
+  /** 'preparing' while the voice is fetched, 'speaking' while a line plays, else 'idle' */
+  status: VoiceStatus;
+  /** whole seconds until the premium voice is tried again after a rate limit (0 = not limited) */
+  limitedForSec: number;
 }
 
 /** Pause after a spoken line before the tour moves on. */
@@ -55,6 +59,8 @@ export function fixedLines(steps: TourStep[], teamSize: number | null): string[]
   return [...new Set(lines.map(toSpeech))];
 }
 
+const secondsLeft = (narrator: Narrator): number => Math.ceil(narrator.limitedForMs() / 1000);
+
 interface VoiceState {
   active: boolean;
   index: number;
@@ -76,11 +82,22 @@ export function useTourVoice(narrator: Narrator, { active, index, paused, steps,
   const [muted, setMuted] = useState(() => narrator.isMuted());
   const [kind, setKind] = useState(() => narrator.voice());
   const [voiceId, setVoiceId] = useState(() => narrator.voiceId());
+  const [status, setStatus] = useState(() => narrator.status());
+  const [limitedForSec, setLimitedForSec] = useState(() => secondsLeft(narrator));
 
   useEffect(() => narrator.subscribe(() => {
     setKind(narrator.voice());
     setVoiceId(narrator.voiceId());
+    setStatus(narrator.status());
+    setLimitedForSec(secondsLeft(narrator));
   }), [narrator]);
+
+  // Count the rate-limit wait down once a second while it lasts.
+  useEffect(() => {
+    if (limitedForSec <= 0) return;
+    const t = setTimeout(() => setLimitedForSec(secondsLeft(narrator)), 1000);
+    return () => clearTimeout(t);
+  }, [limitedForSec, narrator]);
 
   // Speak on step entry, and say the rest once a solve settles.
   useEffect(() => {
@@ -139,5 +156,8 @@ export function useTourVoice(narrator: Narrator, { active, index, paused, steps,
   const spoken = useCallback(() => speechRef.current, []);
   const voiceProvider = useVoiceProvider(narrator);
 
-  return { muted, toggleMute, browserVoice: kind === 'browser' && !muted, voiceId, voiceProvider, spoken };
+  return {
+    muted, toggleMute, browserVoice: kind === 'browser' && !muted, voiceId, voiceProvider, spoken,
+    status: muted ? 'idle' : status, limitedForSec,
+  };
 }
