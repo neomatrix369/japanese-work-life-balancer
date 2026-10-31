@@ -10,7 +10,8 @@ import React from 'react';
 import { TourOverlay } from '../components/TourOverlay';
 import { TOUR_STEPS, type TourStep } from '../tour/steps';
 import { useTour, type TourController } from '../tour/useTour';
-import { fixedLines } from '../tour/useTourVoice';
+import { fixedLines, type TourVoice } from '../tour/useTourVoice';
+import { VoiceStatusCue } from '../components/VoiceToggle';
 import {
   MUTE_STORAGE_KEY,
   PROVIDER_STORAGE_KEY,
@@ -289,6 +290,83 @@ describe('createNarrator', () => {
     expect(audio.play).toHaveBeenCalled();
   });
 
+  it('reports preparing while the voice is fetched, speaking while it plays, then idle', async () => {
+    /**
+     * Scenario: a first-time Gemini line takes a few seconds to arrive.
+     * Slice: voice status cue — narrator state.
+     * Given /tts that answers only when we let it, when a line is spoken, then the status is
+     * "preparing" until the audio arrives, "speaking" while it plays, and "idle" once it ends,
+     * with listeners told of each change.
+     */
+    // -- Given --
+    let answer: (r: ReturnType<typeof audioResponse>) => void = () => undefined;
+    const fetch = vi.fn(() => new Promise<ReturnType<typeof audioResponse>>((r) => (answer = r)));
+    const { narrator, audio } = narratorWith(fetch as unknown as NarratorDeps['fetch']);
+    const seen: string[] = [];
+    narrator.subscribe(() => seen.push(narrator.status()));
+    // -- When --
+    const p = narrator.speak('First line.');
+    await flush();
+    const whileFetching = narrator.status();
+    answer(audioResponse());
+    await flush();
+    const whilePlaying = narrator.status();
+    audio.onended?.(new Event('ended'));
+    await p;
+    // -- Then --
+    expect(whileFetching).toBe('preparing');
+    expect(whilePlaying).toBe('speaking');
+    expect(narrator.status()).toBe('idle');
+    expect(seen.filter((s, i) => s !== seen[i - 1])).toEqual(['preparing', 'speaking', 'idle']);
+  });
+
+  it('goes straight to speaking for a line whose audio is already here', async () => {
+    /**
+     * Scenario: the next step's line was prefetched while the current one played.
+     * Slice: voice status cue — no false "preparing".
+     * Given a line whose audio has already arrived, when it is spoken, then the status never
+     * shows "preparing" and /tts is not asked again.
+     */
+    // -- Given --
+    const fetch = vi.fn(async () => audioResponse());
+    const { narrator } = narratorWith(fetch);
+    narrator.prefetch('Next line.');
+    await flush();
+    const seen: string[] = [];
+    narrator.subscribe(() => seen.push(narrator.status()));
+    // -- When --
+    void narrator.speak('Next line.');
+    await flush();
+    // -- Then --
+    expect(seen).not.toContain('preparing');
+    expect(narrator.status()).toBe('speaking');
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports how long a 429 keeps the premium voice away, and only for a 429', async () => {
+    /**
+     * Scenario: Gemini is rate limited for 3 s; another time the server is simply down.
+     * Slice: voice status cue — "busy" note.
+     * Given /tts answers 429 {retryAfterMs: 3000}, when a line is spoken, then limitedForMs is
+     * 3000 and counts down with time; given /tts fails with 502, then limitedForMs stays 0.
+     */
+    // -- Given --
+    let t = 0;
+    const limited = { ...errorResponse(429), json: async () => ({ retryAfterMs: 3000 }) };
+    const a = narratorWith(vi.fn(async () => limited) as unknown as NarratorDeps['fetch'], { now: () => t });
+    const b = narratorWith(vi.fn(async () => errorResponse(502)) as unknown as NarratorDeps['fetch']);
+    // -- When --
+    void a.narrator.speak('One.');
+    void b.narrator.speak('One.');
+    await flush();
+    const atStart = a.narrator.limitedForMs();
+    t = 1000;
+    // -- Then --
+    expect(atStart).toBe(3000);
+    expect(a.narrator.limitedForMs()).toBe(2000);
+    expect(b.narrator.limitedForMs()).toBe(0);
+  });
+
   it('falls back to the browser voice when /tts takes longer than 4 s', async () => {
     /**
      * Scenario: the premium voice is slow on conference Wi-Fi.
@@ -383,6 +461,8 @@ function controllableNarrator() {
     isMuted: () => muted,
     unlock: vi.fn(),
     voice: () => 'browser',
+    status: SILENT_NARRATOR.status,
+    limitedForMs: SILENT_NARRATOR.limitedForMs,
     voiceId: () => null,
     provider: SILENT_NARRATOR.provider,
     providers: SILENT_NARRATOR.providers,
@@ -454,6 +534,62 @@ describe('useTour with narration', () => {
   });
 });
 
+describe('VoiceStatusCue', () => {
+  const cueVoice = (over: Partial<TourVoice>): TourVoice => ({
+    muted: false,
+    toggleMute: () => undefined,
+    browserVoice: false,
+    voiceId: 'Sulafat',
+    voiceProvider: providerState({ provider: 'gemini', selected: 'gemini|Sulafat', providers: [
+      { id: 'gemini', label: 'Gemini · Sulafat (warm)', voice: 'Sulafat', configured: true },
+    ] }),
+    spoken: () => Promise.resolve(),
+    status: 'idle',
+    limitedForSec: 0,
+    ...over,
+  });
+
+  it('shows "Preparing voice…" with dots, then a sound wave and the voice name while it talks', () => {
+    /**
+     * Scenario: a pause while the Gemini voice is fetched should not look like a stall.
+     * Slice: voice status cue — UI.
+     * Given the voice is preparing, when rendered, then "Preparing voice…" shows with the dots;
+     * when it starts speaking, then the voice's name shows with the sound wave; the text sits in
+     * a polite live region and the animation is hidden from screen readers.
+     */
+    // -- Given --
+    const { container, rerender } = render(<VoiceStatusCue voice={cueVoice({ status: 'preparing' })} />);
+    const live = screen.getByText('Preparing voice…').getAttribute('aria-live');
+    const dotsHidden = container.querySelector('.voice-cue-dots')?.getAttribute('aria-hidden');
+    // -- When --
+    rerender(<VoiceStatusCue voice={cueVoice({ status: 'speaking' })} />);
+    // -- Then --
+    expect(live).toBe('polite');
+    expect(dotsHidden).toBe('true');
+    expect(screen.getByText('Gemini · Sulafat (warm)')).toBeInTheDocument();
+    expect(container.querySelectorAll('.voice-cue-wave i')).toHaveLength(5);
+    expect(container.querySelector('.voice-cue-dots')).toBeNull();
+  });
+
+  it('says the service is busy while the browser voice covers a rate limit, and nothing when muted', () => {
+    /**
+     * Scenario: Gemini answered 429; the browser voice reads for 12 s.
+     * Slice: voice status cue — "busy" note.
+     * Given 12 s of rate limit, when rendered, then "Gemini busy · browser voice for 12 s" shows;
+     * given the narration is muted, then the cue is empty.
+     */
+    // -- Given / When --
+    const { container, rerender } = render(
+      <VoiceStatusCue voice={cueVoice({ status: 'speaking', browserVoice: true, limitedForSec: 12 })} />,
+    );
+    const busy = screen.queryByText('Gemini busy · browser voice for 12 s');
+    expect(busy).not.toBeNull();
+    rerender(<VoiceStatusCue voice={cueVoice({ muted: true, status: 'preparing' })} />);
+    // -- Then --
+    expect(container).toBeEmptyDOMElement();
+  });
+});
+
 describe('TourOverlay voice control', () => {
   it('shows a mute toggle and a quiet "browser voice" note', () => {
     /**
@@ -471,6 +607,8 @@ describe('TourOverlay voice control', () => {
       voiceId: null,
       voiceProvider: providerState(),
       spoken: () => Promise.resolve(),
+      status: 'idle' as const,
+      limitedForSec: 0,
     };
     render(
       <TourOverlay
@@ -515,6 +653,8 @@ describe('TourOverlay voice control', () => {
       voiceId: 'Lily',
       voiceProvider: providerState({ select }),
       spoken: () => Promise.resolve(),
+      status: 'idle' as const,
+      limitedForSec: 0,
     };
     render(
       <TourOverlay

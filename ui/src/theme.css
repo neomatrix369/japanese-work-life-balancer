@@ -772,6 +772,57 @@ td svg, th svg { vertical-align: -2px; }
 .tour-keys { font-size: var(--text-label); color: var(--ink-muted); margin-top: 10px; }
 .tour-callout .btn:focus-visible, .tour-x:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
+/* Voice status next to 🔊: dots while preparing, a sound wave while talking (VoiceToggle). */
+.tour-voice-note {
+  align-self: center;
+  font-size: var(--text-label);
+  color: var(--ink-muted);
+}
+.tour-voice-id { font-family: var(--font-mono-stack); cursor: pointer; }
+.voice-cue {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: min(240px, 100%);
+}
+.voice-cue-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.voice-cue.is-speaking .voice-cue-text { color: var(--accent-ink); }
+.voice-cue-dots, .voice-cue-wave { display: inline-flex; align-items: center; flex: none; gap: 3px; height: 12px; }
+.voice-cue-dots i {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--ink-muted);
+  animation: wlb-voice-dot 1.2s ease-in-out infinite;
+}
+.voice-cue-dots i:nth-child(2) { animation-delay: 0.15s; }
+.voice-cue-dots i:nth-child(3) { animation-delay: 0.3s; }
+.voice-cue-wave i {
+  width: 3px; height: 100%;
+  border-radius: 2px;
+  background: var(--accent);
+  transform-origin: center;
+  animation: wlb-voice-bar 0.9s ease-in-out infinite;
+}
+.voice-cue-wave i:nth-child(2) { animation-delay: -0.3s; }
+.voice-cue-wave i:nth-child(3) { animation-delay: -0.6s; }
+.voice-cue-wave i:nth-child(4) { animation-delay: -0.15s; }
+.voice-cue-wave i:nth-child(5) { animation-delay: -0.45s; }
+@keyframes wlb-voice-dot {
+  0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+  40% { opacity: 1; transform: scale(1); }
+}
+@keyframes wlb-voice-bar {
+  0%, 100% { transform: scaleY(0.35); }
+  50% { transform: scaleY(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* static cue: dots at full strength, bars at fixed heights */
+  .voice-cue-dots i, .voice-cue-wave i { animation: none; }
+  .voice-cue-dots i { opacity: 0.7; }
+  .voice-cue-wave i:nth-child(odd) { transform: scaleY(0.55); }
+}
+
 @keyframes wlb-rise {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: none; }
