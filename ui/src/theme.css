@@ -274,7 +274,8 @@ code {
 
 /* Selects and number inputs (top bar) */
 .topbar select,
-.topbar input[type="number"] {
+.topbar input[type="number"],
+.tour-controls .voice-picker {
   height: var(--control-h);
   padding: 0 24px 0 8px;
   border: 1px solid var(--rule-strong);
@@ -292,12 +293,19 @@ code {
 }
 /* Scenario names are short; the long placeholder option should not set the width. */
 .topbar select:first-of-type { max-width: 150px; text-overflow: ellipsis; }
-.topbar select:hover:not(:disabled) { border-color: var(--ink-muted); }
+.topbar select:hover:not(:disabled),
+.tour-controls .voice-picker:hover { border-color: var(--ink-muted); }
 .topbar select:disabled { opacity: 0.55; cursor: not-allowed; }
 .topbar select:focus,
-.topbar input:focus { outline: none; }
+.topbar input:focus,
+.tour-controls .voice-picker:focus { outline: none; }
 .topbar select:focus-visible,
-.topbar input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.topbar input:focus-visible,
+.tour-controls .voice-picker:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* Voice picker: label + select never split across a wrap; the provider name sets the width. */
+.voice-field { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.topbar select.voice-picker { max-width: none; }
 
 /* Theme toggle: a quiet segmented control */
 .theme-toggle {

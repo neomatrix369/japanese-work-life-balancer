@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { NarrationCtx, TourStep } from './steps';
 import { unspokenTail, type Narrator } from './voice';
+import { useVoiceProvider, type VoiceProviderState } from './useVoiceProvider';
 
 export interface TourVoice {
   muted: boolean;
@@ -14,6 +15,8 @@ export interface TourVoice {
   browserVoice: boolean;
   /** ElevenLabs voice ID the server is using (null while loading or when unavailable) */
   voiceId: string | null;
+  /** which provider speaks (ElevenLabs / Gemini / Gemini Argon / browser) and its setter */
+  voiceProvider: VoiceProviderState;
   /** resolves when the current step's line has been spoken (or skipped / stopped) */
   spoken: () => Promise<void>;
 }
@@ -124,6 +127,7 @@ export function useTourVoice(narrator: Narrator, { active, index, paused, steps,
   }, [active, toggleMute]);
 
   const spoken = useCallback(() => speechRef.current, []);
+  const voiceProvider = useVoiceProvider(narrator);
 
-  return { muted, toggleMute, browserVoice: kind === 'browser' && !muted, voiceId, spoken };
+  return { muted, toggleMute, browserVoice: kind === 'browser' && !muted, voiceId, voiceProvider, spoken };
 }

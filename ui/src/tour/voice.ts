@@ -1,13 +1,37 @@
 /**
  * Voice narration for the guided tour.
  *
- * The narrator first asks the dev server's `POST /tts` (ElevenLabs "Lily", key kept
- * server-side) for an mp3. When that fails, is missing, or is slow (> 4 s), it falls back to
- * the browser's own speechSynthesis (an en-GB voice when there is one), so the tour always
- * keeps talking. Once the key works again, the premium voice comes back by itself.
+ * The narrator first asks the dev server's `POST /tts` for audio from the chosen provider
+ * (ElevenLabs "Lily", Gemini, or Gemini Argon — keys kept server-side). When that fails, is
+ * missing, or is slow, it falls back to the browser's own speechSynthesis (an en-GB voice
+ * when there is one), so the tour always keeps talking. Once the key works again, the
+ * premium voice comes back by itself.
  */
 
 export type VoiceKind = 'premium' | 'browser' | 'none';
+
+/** Same ids as the server's `VoiceProvider` in tts-plugin.ts. */
+export type VoiceProvider = 'elevenlabs' | 'gemini' | 'gemini-argon' | 'browser';
+
+export interface ProviderOption {
+  id: VoiceProvider;
+  label: string;
+  voice: string | null;
+  /** false when the server has no key for it */
+  configured: boolean;
+}
+
+const PROVIDER_IDS: readonly VoiceProvider[] = ['elevenlabs', 'gemini', 'gemini-argon', 'browser'];
+
+export function isVoiceProvider(value: unknown): value is VoiceProvider {
+  return typeof value === 'string' && (PROVIDER_IDS as readonly string[]).includes(value);
+}
+
+/** Shown before GET /tts answers (or when it never does). */
+export const FALLBACK_PROVIDERS: ProviderOption[] = [
+  { id: 'elevenlabs', label: 'ElevenLabs', voice: null, configured: false },
+  { id: 'browser', label: 'Browser voice', voice: null, configured: true },
+];
 
 export interface Narrator {
   /** say one line; resolves when it has been spoken, skipped, muted or stopped */
@@ -23,9 +47,15 @@ export interface Narrator {
   unlock(): void;
   /** which voice spoke the latest line */
   voice(): VoiceKind;
-  /** ElevenLabs voice ID actually in use on the server (null until fetched or when unavailable) */
+  /** voice ID/name of the active provider on the server (null until fetched or when unavailable) */
   voiceId(): string | null;
-  /** notified when `voice()` changes; returns an unsubscribe */
+  /** the provider in use: the user's choice, else the server's default */
+  provider(): VoiceProvider;
+  /** providers the server offers (with key status) */
+  providers(): ProviderOption[];
+  /** switch provider; remembered across visits, takes effect from the next line */
+  setProvider(p: VoiceProvider): void;
+  /** notified when `voice()`, the provider or the provider list changes; returns an unsubscribe */
   subscribe(fn: () => void): () => void;
 }
 
@@ -41,6 +71,9 @@ export const SILENT_NARRATOR: Narrator = {
   unlock: () => undefined,
   voice: () => 'none',
   voiceId: () => null,
+  provider: () => 'browser',
+  providers: () => FALLBACK_PROVIDERS,
+  setProvider: () => undefined,
   subscribe: () => () => undefined,
 };
 
@@ -113,7 +146,13 @@ export function pickVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice 
 // ── The narrator ────────────────────────────────────────────────────────────
 
 export const MUTE_STORAGE_KEY = 'tourVoiceMuted';
+export const PROVIDER_STORAGE_KEY = 'tourVoiceProvider';
 export const TTS_TIMEOUT_MS = 4000;
+/**
+ * Gemini needs ~4 s for a first-time line and Argon ~17 s (it writes the line, then speaks
+ * it), so they get longer waits. Audio is cached on disk, so a rehearsal run makes replays instant.
+ */
+export const PROVIDER_TIMEOUT_MS: Partial<Record<VoiceProvider, number>> = { gemini: 10_000, 'gemini-argon': 25_000 };
 const MAX_SERVER_CHARS = 600; // same limit as the /tts route
 /** a 0-sample WAV: playing it inside a click "unlocks" audio for later */
 const SILENT_WAV = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
@@ -145,6 +184,8 @@ export interface NarratorDeps {
   storage: Pick<Storage, 'getItem' | 'setItem'> | null;
   createObjectURL: (blob: Blob) => string;
   timeoutMs: number;
+  /** per-provider waits that override `timeoutMs` */
+  providerTimeoutMs: Partial<Record<VoiceProvider, number>>;
   /** after a /tts failure, use the browser voice for this long before trying again */
   retryAfterMs: number;
   now: () => number;
@@ -167,6 +208,7 @@ function browserDeps(): NarratorDeps {
     storage,
     createObjectURL: (b) => URL.createObjectURL(b),
     timeoutMs: TTS_TIMEOUT_MS,
+    providerTimeoutMs: PROVIDER_TIMEOUT_MS,
     retryAfterMs: 60_000,
     now: () => Date.now(),
   };
@@ -180,11 +222,17 @@ function capMs(text: string): number {
 export function createNarrator(overrides: Partial<NarratorDeps> = {}): Narrator {
   const d: NarratorDeps = { ...browserDeps(), ...overrides };
   let muted = false;
+  let chosen: VoiceProvider | null = null;
   try {
     muted = d.storage?.getItem(MUTE_STORAGE_KEY) === '1';
+    const stored = d.storage?.getItem(PROVIDER_STORAGE_KEY);
+    if (isVoiceProvider(stored)) chosen = stored;
   } catch {
     muted = false;
   }
+  let serverDefault: VoiceProvider = 'elevenlabs';
+  let providerList: ProviderOption[] = FALLBACK_PROVIDERS;
+  const currentProvider = (): VoiceProvider => chosen ?? serverDefault;
   let token = 0;
   let audio: AudioLike | null = null;
   let finishCurrent: (() => void) | null = null;
@@ -204,7 +252,13 @@ export function createNarrator(overrides: Partial<NarratorDeps> = {}): Narrator 
       return null;
     }).then((body) => {
       if (body && typeof body === 'object' && 'voiceId' in body) {
-        activeVoiceId = (body as { voiceId: string }).voiceId;
+        const b = body as { voiceId: string; provider?: unknown; providers?: unknown };
+        activeVoiceId = b.voiceId;
+        if (isVoiceProvider(b.provider)) serverDefault = b.provider;
+        if (Array.isArray(b.providers)) {
+          const list = b.providers.filter((p): p is ProviderOption => isVoiceProvider((p as ProviderOption)?.id));
+          if (list.length > 0) providerList = list;
+        }
         // Server is reachable and config may have changed (e.g. new API key in .env.local) —
         // clear any stale backoff so the next POST actually tries.
         serverOffUntil = 0;
@@ -221,7 +275,10 @@ export function createNarrator(overrides: Partial<NarratorDeps> = {}): Narrator 
   const getAudio = () => (audio ??= d.createAudio?.() ?? null);
 
   function audioUrl(line: string): Promise<string | null> {
-    const hit = urls.get(line);
+    const provider = currentProvider();
+    if (provider === 'browser') return Promise.resolve(null);
+    const cacheKey = `${provider}\n${line}`;
+    const hit = urls.get(cacheKey);
     if (hit) return hit;
     if (!d.fetch || line.length > MAX_SERVER_CHARS || d.now() < serverOffUntil) return Promise.resolve(null);
     const fetchFn = d.fetch;
@@ -230,7 +287,8 @@ export function createNarrator(overrides: Partial<NarratorDeps> = {}): Narrator 
         const res = await fetchFn('/tts', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: line }),
+          // no provider until the user picks one: the server's default (as before)
+          body: JSON.stringify(chosen ? { text: line, provider } : { text: line }),
         });
         if (res.ok && (res.headers.get('content-type') ?? '').includes('audio')) {
           return d.createObjectURL(await res.blob());
@@ -241,9 +299,9 @@ export function createNarrator(overrides: Partial<NarratorDeps> = {}): Narrator 
       serverOffUntil = d.now() + d.retryAfterMs;
       return null;
     })();
-    urls.set(line, p);
+    urls.set(cacheKey, p);
     void p.then((u) => {
-      if (!u) urls.delete(line);
+      if (!u) urls.delete(cacheKey);
     });
     return p;
   }
@@ -324,7 +382,7 @@ export function createNarrator(overrides: Partial<NarratorDeps> = {}): Narrator 
       const line = toSpeech(text);
       if (muted || !line) return;
       const mine = token;
-      const url = await withTimeout(audioUrl(line), d.timeoutMs);
+      const url = await withTimeout(audioUrl(line), d.providerTimeoutMs[currentProvider()] ?? d.timeoutMs);
       if (mine !== token) return;
       if (url) {
         setKind('premium');
@@ -375,7 +433,21 @@ export function createNarrator(overrides: Partial<NarratorDeps> = {}): Narrator 
       }
     },
     voice: () => kind,
-    voiceId: () => activeVoiceId,
+    voiceId: () =>
+      chosen ? (providerList.find((p) => p.id === chosen)?.voice ?? null) : activeVoiceId,
+    provider: currentProvider,
+    providers: () => providerList,
+    setProvider(p) {
+      if (p === currentProvider() && chosen) return;
+      chosen = p;
+      serverOffUntil = 0; // a failure on the old provider says nothing about the new one
+      try {
+        d.storage?.setItem(PROVIDER_STORAGE_KEY, p);
+      } catch {
+        // best-effort; the in-memory choice still applies
+      }
+      listeners.forEach((fn) => fn());
+    },
     subscribe(fn) {
       listeners.add(fn);
       return () => listeners.delete(fn);

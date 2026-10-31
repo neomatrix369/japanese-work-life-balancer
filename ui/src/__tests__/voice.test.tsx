@@ -12,13 +12,29 @@ import type { TourStep } from '../tour/steps';
 import { useTour, type TourController } from '../tour/useTour';
 import {
   MUTE_STORAGE_KEY,
+  PROVIDER_STORAGE_KEY,
+  SILENT_NARRATOR,
   createNarrator,
   pickVoice,
   toSpeech,
   unspokenTail,
   type Narrator,
   type NarratorDeps,
+  type ProviderOption,
 } from '../tour/voice';
+import type { VoiceProviderState } from '../tour/useVoiceProvider';
+
+const PROVIDERS: ProviderOption[] = [
+  { id: 'elevenlabs', label: 'ElevenLabs', voice: 'Lily', configured: true },
+  { id: 'gemini', label: 'Gemini', voice: 'Aoede', configured: false },
+  { id: 'browser', label: 'Browser voice', voice: null, configured: true },
+];
+const providerState = (over: Partial<VoiceProviderState> = {}): VoiceProviderState => ({
+  provider: 'elevenlabs',
+  providers: PROVIDERS,
+  setProvider: vi.fn(),
+  ...over,
+});
 
 // ── Fakes ───────────────────────────────────────────────────────────────────
 
@@ -305,6 +321,9 @@ function controllableNarrator() {
     unlock: vi.fn(),
     voice: () => 'browser',
     voiceId: () => null,
+    provider: SILENT_NARRATOR.provider,
+    providers: SILENT_NARRATOR.providers,
+    setProvider: vi.fn(),
     subscribe: () => () => undefined,
   };
   return { narrator, finishLine: () => finish?.() };
@@ -380,7 +399,14 @@ describe('TourOverlay voice control', () => {
      */
     // -- Given --
     const toggleMute = vi.fn();
-    const voice = { muted: false, toggleMute, browserVoice: true, voiceId: null, spoken: () => Promise.resolve() };
+    const voice = {
+      muted: false,
+      toggleMute,
+      browserVoice: true,
+      voiceId: null,
+      voiceProvider: providerState(),
+      spoken: () => Promise.resolve(),
+    };
     render(
       <TourOverlay
         target={null}
@@ -406,5 +432,122 @@ describe('TourOverlay voice control', () => {
     // -- Then --
     expect(screen.getByText('browser voice')).toBeInTheDocument();
     expect(toggleMute).toHaveBeenCalledTimes(1);
+  });
+
+  it('lets the presenter switch voice from the tour controls; keyless providers are disabled', () => {
+    /**
+     * Scenario: mid-demo, the presenter wants a different narrator.
+     * Slice: voice provider picker — UI.
+     * Given ElevenLabs active and Gemini without a key, when the picker changes to the
+     * browser voice, then setProvider gets "browser" and the Gemini option is disabled.
+     */
+    // -- Given --
+    const setProvider = vi.fn();
+    const voice = {
+      muted: false,
+      toggleMute: () => undefined,
+      browserVoice: false,
+      voiceId: 'Lily',
+      voiceProvider: providerState({ setProvider }),
+      spoken: () => Promise.resolve(),
+    };
+    render(
+      <TourOverlay
+        target={null}
+        stepId="a"
+        title="A"
+        text="First step."
+        index={0}
+        total={3}
+        paused={false}
+        running={false}
+        recorded={false}
+        isLast={false}
+        onNext={() => undefined}
+        onBack={() => undefined}
+        onTogglePause={() => undefined}
+        onExit={() => undefined}
+        onReplay={() => undefined}
+        voice={voice}
+      />,
+    );
+    const picker = screen.getByRole('combobox', { name: 'Narration voice' });
+    // -- When --
+    fireEvent.change(picker, { target: { value: 'browser' } });
+    // -- Then --
+    expect(setProvider).toHaveBeenCalledWith('browser');
+    expect(screen.getByRole('option', { name: /Gemini · Aoede \(no key\)/ })).toBeDisabled();
+  });
+});
+
+describe('narrator voice provider', () => {
+  it('sends the picked provider to /tts and remembers it for the next visit', async () => {
+    /**
+     * Scenario: the presenter picks Gemini before pressing Play demo.
+     * Slice: voice provider picker — narrator.
+     * Given a narrator, when Gemini is picked and a line is spoken, then the POST names
+     * "gemini", the choice is stored, and a new narrator starts with Gemini.
+     */
+    // -- Given --
+    const fetch = vi.fn(async () => audioResponse());
+    const { narrator, audio, storage } = narratorWith(fetch as unknown as NarratorDeps['fetch']);
+    // -- When --
+    narrator.setProvider('gemini');
+    const p = narrator.speak('Rest matters.');
+    await flush();
+    audio.onended?.(new Event('ended'));
+    await p;
+    const again = createNarrator({ fetch: null, storage, speech: null, createAudio: null });
+    // -- Then --
+    const body = JSON.parse((fetch.mock.calls[0] as unknown as [string, RequestInit])[1].body as string);
+    expect(body).toEqual({ text: 'Rest matters.', provider: 'gemini' });
+    expect(storage.data[PROVIDER_STORAGE_KEY]).toBe('gemini');
+    expect(again.provider()).toBe('gemini');
+  });
+
+  it('uses the browser voice straight away, without calling /tts, when "Browser voice" is picked', async () => {
+    /**
+     * Scenario: no Wi-Fi at the venue, so the presenter picks the offline voice.
+     * Slice: voice provider picker — narrator.
+     * Given "browser" picked, when a line is spoken, then /tts is never asked and
+     * speechSynthesis reads it.
+     */
+    // -- Given --
+    const fetch = vi.fn(async () => audioResponse());
+    const { narrator, speech } = narratorWith(fetch as unknown as NarratorDeps['fetch']);
+    narrator.setProvider('browser');
+    // -- When --
+    void narrator.speak('Offline line.');
+    await flush();
+    // -- Then --
+    expect(fetch).not.toHaveBeenCalled();
+    expect(speech.spoken.map((u) => u.text)).toEqual(['Offline line.']);
+  });
+
+  it('waits longer for Gemini Argon than for ElevenLabs before falling back', async () => {
+    /**
+     * Scenario: Argon writes the commentary first, so its first answer takes ~17 s.
+     * Slice: voice provider picker — pacing.
+     * Given Argon picked and /tts slow, when 4 s pass the browser voice has not taken
+     * over; it only does after the Argon wait.
+     */
+    vi.useFakeTimers();
+    try {
+      // -- Given --
+      const { narrator, speech } = narratorWith(vi.fn(() => new Promise(() => undefined)) as never, {
+        providerTimeoutMs: { 'gemini-argon': 20_000 },
+      });
+      narrator.setProvider('gemini-argon');
+      // -- When --
+      void narrator.speak('Slow Argon line.');
+      await act(async () => vi.advanceTimersByTimeAsync(5_000));
+      const after5s = speech.spoken.length;
+      await act(async () => vi.advanceTimersByTimeAsync(15_100));
+      // -- Then --
+      expect(after5s).toBe(0);
+      expect(speech.spoken).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

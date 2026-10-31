@@ -3,6 +3,8 @@ import type { Preset, SolverStatus } from '../api';
 import type { Currency, Role } from '../types';
 import { Flower2, Info, Play, Square } from 'lucide-react';
 import { ThemeControl } from './ThemeControl';
+import { VoicePicker } from './VoicePicker';
+import type { VoiceProviderState } from '../tour/useVoiceProvider';
 
 interface TopBarProps {
   scenarios: string[];
@@ -26,6 +28,8 @@ interface TopBarProps {
   onPlayTour?: () => void;
   tourActive?: boolean;
   onAbout?: () => void;
+  /** narration voice picker for the tour (set it before pressing Play demo) */
+  voice?: VoiceProviderState;
 }
 
 export function TopBar({
@@ -47,6 +51,7 @@ export function TopBar({
   onPlayTour,
   tourActive = false,
   onAbout,
+  voice,
 }: TopBarProps) {
   return (
     <div className="topbar" data-tour="controls">
@@ -157,6 +162,8 @@ export function TopBar({
         <option value="HR">HR</option>
         <option value="Executive">Executive</option>
       </select>
+
+      {voice && <VoicePicker state={voice} id="topbar-voice" />}
     </div>
   );
 }

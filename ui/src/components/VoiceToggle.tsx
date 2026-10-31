@@ -1,9 +1,11 @@
 import type { TourVoice } from '../tour/useTourVoice';
+import { VoicePicker } from './VoicePicker';
 
-/** 🔊/🔇 narration toggle for the tour controls, plus a quiet "browser voice" note. */
+/** 🔊/🔇 narration toggle and voice picker for the tour controls, plus a quiet "browser voice" note. */
 export function VoiceToggle({ voice }: { voice: TourVoice }) {
   return (
     <>
+      <VoicePicker state={voice.voiceProvider} id="tour-voice-provider" compact />
       <button
         className="btn tour-voice"
         onClick={voice.toggleMute}
@@ -24,7 +26,7 @@ export function VoiceToggle({ voice }: { voice: TourVoice }) {
           {voice.voiceId}
         </span>
       )}
-      {voice.browserVoice && (
+      {voice.browserVoice && voice.voiceProvider.provider !== 'browser' && (
         <span
           className="tour-voice-note"
           title="The premium voice is not available, so your browser reads the tour"
