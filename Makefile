@@ -24,7 +24,7 @@ help:
 	@printf '\nJapanese Work-Life Balancer — Makefile targets\n'
 	@printf '===============================================\n'
 	@printf '  check   verify JDK>=21, Maven>=3.9, Node>=20, Python3>=3.11, free ports,\n'
-	@printf '          Timefold license + ElevenLabs key status (installs nothing)\n'
+	@printf '          Timefold license + voice key status (installs nothing)\n'
 	@printf '  setup   check, then install npm + Python deps (safe to re-run after a pull)\n'
 	@printf '  data    generate synthetic JSON scenarios -> data-gen/out/\n'
 	@printf '  model   start Quarkus solver on :8083  (keep terminal open)\n'
@@ -40,8 +40,8 @@ help:
 	@printf '  make model MVN=/usr/local/bin/mvn\n'
 	@printf '  make mcp MODEL_URL=http://localhost:8083\n'
 	@printf '  make demo ENTERPRISE=1    Timefold Enterprise (needs a license; also: make model ENTERPRISE=1)\n'
-	@printf '\nTour voice (optional): ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID, ELEVENLABS_MODEL_ID\n'
-	@printf '  put them in ui/.env.local — see docs/external-services.md\n\n'
+	@printf '\nTour voices (optional): ELEVENLABS_API_KEY and/or GEMINI_API_KEY\n'
+	@printf '  cp ui/.env.example ui/.env.local, add a key — see docs/external-services.md\n\n'
 
 # ── setup ─────────────────────────────────────────────────────────────────────
 
@@ -103,6 +103,14 @@ check:
 	  echo "  ElevenLabs key: set — the tour uses the premium voice"; \
 	else \
 	  echo "  ElevenLabs key: none — fine, the tour uses your browser's voice. Premium voice: docs/external-services.md"; \
+	fi
+	@if [ -n "$${GEMINI_API_KEY:-}" ] || grep -qs '^GEMINI_API_KEY=.' ui/.env.local ui/.env; then \
+	  echo "  Gemini key: set — Gemini, Gemini Argon and Japanese voices are in the Voice dropdown"; \
+	else \
+	  echo "  Gemini key: none — fine. For the Gemini and Japanese voices: docs/external-services.md#gemini-tour-voices"; \
+	fi
+	@if [ ! -f ui/.env.local ] && [ -z "$${ELEVENLABS_API_KEY:-}$${GEMINI_API_KEY:-}" ]; then \
+	  echo "           Template for both keys: cp ui/.env.example ui/.env.local"; \
 	fi
 
 # ── setup ─────────────────────────────────────────────────────────────────────
