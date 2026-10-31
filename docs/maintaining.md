@@ -72,7 +72,7 @@ click the **Dark theme** button instead.
 
 ## Secrets
 
-- ElevenLabs key: `ui/.env.local` or your shell, never a committed file. `.env`, `.env.local` and `*.pem` are git-ignored.
+- ElevenLabs and Gemini keys: `ui/.env.local` or your shell, never a committed file. `.env`, `.env.local` and `*.pem` are git-ignored.
 - Timefold license: outside the repo (`~/timefold-license.pem`, `TIMEFOLD_LICENSE_PATH` or `TIMEFOLD_LICENSE`).
 - Commits are scanned by gitleaks when the local pre-commit hook is installed.
 

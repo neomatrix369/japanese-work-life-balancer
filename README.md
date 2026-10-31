@@ -260,13 +260,27 @@ and only restyles existing classes, so visual changes never touch component mark
 
 </details>
 
-### Voice narration (ElevenLabs)
+### Voice narration (ElevenLabs, Gemini, Gemini Argon)
 
 <details>
-<summary>Optional premium voice for the tour — env vars, picking a voice, fallback</summary>
+<summary>Optional premium voices for the tour — switching voice, env vars, fallback</summary>
 
 The **▶ Play demo** tour reads each step aloud and waits for the line to finish before it moves on.
 Press **🔊/🔇** in the tour controls (or **M**) to mute. The app remembers your choice.
+
+**Switching voice.** Pick the narrator from the **Voice** dropdown at the end of the top bar (before you press
+Play demo) or next to 🔊 in the tour controls (mid-demo — it applies from the next line). The choice is remembered.
+
+| Voice | Needs | First play of a line | What you hear |
+|---|---|---|---|
+| ElevenLabs *(default)* | `ELEVENLABS_API_KEY` | ~1.5 s | "Lily", reading the step text |
+| Gemini | `GEMINI_API_KEY` | ~3–4 s | Gemini TTS ("Aoede"), reading the step text |
+| Gemini Argon | `GEMINI_API_KEY` | ~7–17 s | Argon rewrites the step as short wellbeing commentary, then Gemini TTS reads it |
+| Browser voice | nothing | instant | your browser's built-in voice, offline |
+
+Voices without a key show "(no key)" and can't be picked. **Rehearse once per voice before the real demo:** every
+line is cached on disk, so the second run plays instantly (Argon's first run is slow because it writes each line).
+Gemini set-up: **[docs/external-services.md → Gemini](docs/external-services.md#gemini-tour-voices)**.
 
 **Set-up in one minute.** Create an API key on the [ElevenLabs API keys page](https://elevenlabs.io/app/api/api-keys)
 with the **Text to Speech** permission, then put it in `ui/.env.local` (git-ignored) and restart `make demo`:
@@ -286,16 +300,22 @@ from your shell first, then `ui/.env.local`, then `ui/.env`.
 | `ELEVENLABS_API_KEY` | Required for the premium voice | — | Read on every request, so a new key works without a restart |
 | `ELEVENLABS_VOICE_ID` | Optional | `pFZP5JQG7iQjIQuC4Bku` ("Lily", a warm British narrator) | Which voice reads the tour. **Read once at start-up — restart after changing it** |
 | `ELEVENLABS_MODEL_ID` | Optional | `eleven_multilingual_v2` | Speech model (it says Japanese names well). Read once at start-up |
+| `GEMINI_API_KEY` | Required for Gemini / Gemini Argon | — | Read on every request |
+| `GEMINI_VOICE_NAME` | Optional | `Aoede` | Gemini voice (e.g. `Kore`, `Puck`, `Charon`). Read once at start-up |
+| `GEMINI_TTS_MODEL` / `GEMINI_ARGON_MODEL` | Optional | `gemini-3.8-flash-tts` / `gemini-4-argon` | Read once at start-up |
+| `TTS_PROVIDER` | Optional | `elevenlabs` if its key is set, else `gemini` | Voice used until someone picks one in the dropdown |
 
-Check what the server is using: `curl -s localhost:5173/tts` prints the voice and model, and `.logs/ui.log` shows
-`apiKey=present` or `MISSING`. Spoken lines are cached in `ui/.tts-cache/` (git-ignored), keyed by voice and text,
-so fixed lines replay for free and switching voices never replays old audio.
+Check what the server is using: `curl -s localhost:5173/tts` prints the default voice and which providers have a
+key, and `.logs/ui.log` shows `geminiKey=present|missing elevenLabsKey=present|missing`. Spoken lines are cached in
+`ui/.tts-cache/` (git-ignored), keyed by provider, voice and text, so fixed lines replay for free and switching
+voices never replays old audio.
 
-**Without a working key.** If `/tts` fails or takes more than 4 s, your browser's own British voice
-reads the tour, and the tour controls show a small "browser voice" note. The tour keeps running either way.
+**Without a working key.** If `/tts` fails or is too slow (4 s for ElevenLabs, 10 s for Gemini, 25 s for Argon),
+your browser's own British voice reads the tour, and the tour controls show a small "browser voice" note. The tour
+keeps running either way.
 
-**The key never reaches the browser.** The browser posts text to `POST /tts` on the Vite server, and
-only the server calls ElevenLabs. The key is not in the built bundle.
+**Keys never reach the browser.** The browser posts text to `POST /tts` on the Vite server, and
+only the server calls ElevenLabs or Gemini. No key is in the built bundle.
 
 </details>
 
