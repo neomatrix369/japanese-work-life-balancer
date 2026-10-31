@@ -9,7 +9,7 @@ outside this repo, what each one adds, and exactly how to set it up.
 | Service | Needed? | What it adds | Cost |
 |---|---|---|---|
 | [ElevenLabs](#elevenlabs-premium-tour-voice) | Optional | A natural narrator voice for the **▶ Play demo** tour | Free tier works for a demo; [paid plans](https://elevenlabs.io/pricing) for more characters or commercial use |
-| [Gemini](#gemini-tour-voices) | Optional | Two more tour voices: Gemini TTS, and Gemini Argon commentary | Billed per use on the Gemini API ([pricing](https://ai.google.dev/pricing)); cached lines cost nothing |
+| [Gemini](#gemini-tour-voices) | Optional | Six more tour voices, Gemini Argon wellbeing commentary, and two Japanese voices | Billed per use on the Gemini API ([pricing](https://ai.google.dev/pricing)); cached lines cost nothing |
 | [Timefold Enterprise](#timefold-solver-community-or-enterprise) | Optional | Exact per-constraint match counts in **Broken constraints** (Community shows "–") | Free time-limited trial; licence needs a company email |
 
 ---
@@ -63,7 +63,12 @@ the [models guide](https://elevenlabs.io/docs/models).
 
 ### 4. Tell the app
 
-Create **`ui/.env.local`** (git ignores it; never commit a key):
+Create **`ui/.env.local`** from the template (git ignores it; never commit a key). The template also has the
+[Gemini](#gemini-tour-voices) key, so you can fill in either or both:
+
+```bash
+cp ui/.env.example ui/.env.local
+```
 
 ```dotenv
 ELEVENLABS_API_KEY=sk_your_key_here
@@ -144,12 +149,57 @@ Adds these choices to the **Voice** dropdown (top bar, and next to 🔊 in the t
 ElevenLabs stays the default whenever its key is set; Gemini only speaks when picked (or when it is the only key, or
 `TTS_PROVIDER=gemini`).
 
-**Set-up.**
+### 1. Create a key
 
-1. Create a key in [Google AI Studio → API keys](https://aistudio.google.com/apikey).
-2. Put it in your shell (`export GEMINI_API_KEY=…`) or in `ui/.env.local` (git-ignored): `GEMINI_API_KEY=your_key_here`.
-3. Restart `make demo` and check `.logs/ui.log` for `geminiKey=present`, or run `curl -s localhost:5173/tts`
-   (Gemini shows `"configured":true`).
+Sign in to [Google AI Studio → API keys](https://aistudio.google.com/apikey) with a Google account and click
+**Create API key**. AI Studio creates (or reuses) a Google Cloud project for it. Copy the key — treat it like a password.
+
+### 2. Tell the app
+
+```bash
+cp ui/.env.example ui/.env.local   # once; git-ignored. Skip if you already have ui/.env.local
+```
+
+Then set the key in `ui/.env.local` (or `export GEMINI_API_KEY=…` in your shell, which wins over the file):
+
+```dotenv
+GEMINI_API_KEY=your_gemini_key_here
+# Optional — defaults shown
+# GEMINI_VOICE_NAME=Aoede
+# TTS_PROVIDER=gemini        # make Gemini the default even when an ElevenLabs key is set
+```
+
+### 3. Restart and check
+
+```bash
+make check                           # prints "Gemini key: set" (never the key itself)
+make demo
+grep '\[tts\]' .logs/ui.log          # e.g. [tts] default=elevenlabs geminiKey=present elevenLabsKey=present
+curl -s localhost:5173/tts           # Gemini entries show "configured":true
+```
+
+In the app, the Gemini voices in the **Voice** dropdown no longer say "(no key)".
+
+### 4. Rehearse
+
+```bash
+make warm-voice PROVIDER=gemini      # UI running; also gemini-argon or gemini-ja
+```
+
+This pre-records the tour's fixed lines (paced to stay under the per-minute limit). Then play the tour once with
+the voice you'll demo, so the remaining lines are cached too.
+
+### Troubleshooting Gemini
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| Gemini voices show "(no key)" | Key not found | `make check`; restart `make demo` after editing `ui/.env.local`; look for stray quotes or spaces |
+| "Gemini busy · browser voice for N s" in the tour | Per-minute limit hit (`[tts] gemini upstream 429` in `.logs/ui.log`) | Nothing — the tour switches back by itself. Run `make warm-voice` before demos to avoid it |
+| `[tts] gemini upstream 400` / `403` | Key invalid or revoked, or the Generative Language API is restricted for that key | Create a fresh key in AI Studio; check the key's API restrictions in Google Cloud |
+| `[tts] gemini upstream 404` | A `GEMINI_*_MODEL` override names a model that doesn't exist | Remove the override to use the default |
+| Tour uses the browser voice with no note | Gemini slow (over 10 s, 25 s for Argon) or unreachable | Rehearse first so lines come from the cache |
+
+The 429 row is behaviour we saw live; the 400/403/404 rows follow Google's documented errors and were not triggered here.
 
 **No "speak like a person" prompt.** Tested 2026-10-31 by transcribing the audio: directions written into the
 text ("Read this like a real person…", "Say warmly and naturally:") were read aloud in about half the samples,
