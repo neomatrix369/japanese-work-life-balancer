@@ -9,6 +9,7 @@ outside this repo, what each one adds, and exactly how to set it up.
 | Service | Needed? | What it adds | Cost |
 |---|---|---|---|
 | [ElevenLabs](#elevenlabs-premium-tour-voice) | Optional | A natural narrator voice for the **▶ Play demo** tour | Free tier works for a demo; [paid plans](https://elevenlabs.io/pricing) for more characters or commercial use |
+| [Gemini](#gemini-tour-voices) | Optional | Two more tour voices: Gemini TTS, and Gemini Argon commentary | Billed per use on the Gemini API ([pricing](https://ai.google.dev/pricing)); cached lines cost nothing |
 | [Timefold Enterprise](#timefold-solver-community-or-enterprise) | Optional | Exact per-constraint match counts in **Broken constraints** (Community shows "–") | Free time-limited trial; licence needs a company email |
 
 ---
@@ -84,11 +85,11 @@ The voice and model are read **once when the UI server starts**, so restart `mak
 Then confirm what the server picked up:
 
 ```bash
-grep '\[tts\]' .logs/ui.log          # e.g. [tts] voice=pFZP5JQG7iQjIQuC4Bku model=eleven_multilingual_v2 apiKey=present
-curl -s localhost:5173/tts            # {"voiceId":"…","modelId":"…"}
+grep '\[tts\]' .logs/ui.log          # e.g. [tts] default=elevenlabs geminiKey=present elevenLabsKey=present
+curl -s localhost:5173/tts            # {"provider":"elevenlabs","voiceId":"…","providers":[…]}
 ```
 
-`apiKey=MISSING` means the key wasn't found in any of the four places above.
+`elevenLabsKey=missing` means the key wasn't found in any of the four places above.
 
 **Test the key end to end** (speaks one word, about 5 characters of quota):
 
@@ -104,7 +105,7 @@ answer is JSON with an error code, explained in the table below.
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| Tour says "browser voice" | No key, wrong key, or ElevenLabs slow/unreachable | Check `apiKey=present` in `.logs/ui.log`; check the [status page](https://status.elevenlabs.io/) |
+| Tour says "browser voice" | No key, wrong key, or ElevenLabs slow/unreachable | Check `elevenLabsKey=present` in `.logs/ui.log`; check the [status page](https://status.elevenlabs.io/) |
 | Wrong voice plays after changing `ELEVENLABS_VOICE_ID` | UI server still running with the old setting, or an exported shell variable overrides `ui/.env.local` | Restart `make demo`; run `echo $ELEVENLABS_VOICE_ID` to spot a shell override |
 | `[tts] upstream 401 invalid_api_key` in `.logs/ui.log` | Key revoked, mistyped, or has stray quotes/spaces | Create a new key and paste it again |
 | `[tts] upstream 401` with a permissions code | Key lacks **Text to Speech** | Edit the key's permissions on the [API keys page](https://elevenlabs.io/app/api/api-keys) |
@@ -124,6 +125,34 @@ free disk space or force fresh audio. The app also caps itself at 30 ElevenLabs 
 
 **The key never reaches the browser.** The browser posts text to `POST /tts` on the Vite dev server, and only the
 server calls ElevenLabs. The key is not in the built bundle.
+
+---
+
+## Gemini (tour voices)
+
+Adds two choices to the **Voice** dropdown (top bar, and next to 🔊 in the tour controls):
+
+- **Gemini**: `gemini-3.8-flash-tts` reads the step text in the `Aoede` voice.
+- **Gemini Argon**: `gemini-4-argon` first rewrites the step as one or two spoken sentences about wellbeing and rest,
+  then Gemini TTS reads that. If Argon fails, the original step text is spoken instead.
+
+ElevenLabs stays the default whenever its key is set; Gemini only speaks when picked (or when it is the only key, or
+`TTS_PROVIDER=gemini`).
+
+**Set-up.**
+
+1. Create a key in [Google AI Studio → API keys](https://aistudio.google.com/apikey).
+2. Put it in your shell (`export GEMINI_API_KEY=…`) or in `ui/.env.local` (git-ignored): `GEMINI_API_KEY=your_key_here`.
+3. Restart `make demo` and check `.logs/ui.log` for `geminiKey=present`, or run `curl -s localhost:5173/tts`
+   (Gemini shows `"configured":true`).
+
+**Speed and rehearsal.** Measured on 2026-10-31: Gemini took ~3–4 s for a first-time line; Argon took 7–17 s (it
+writes the line before speaking it). The tour waits up to 10 s for Gemini and 25 s for Argon before the browser voice
+takes over. Every line is cached in `ui/.tts-cache/`, so **play the tour once per voice before the real demo** and the
+second run is instant.
+
+**The key never reaches the browser.** The server sends it in the `x-goog-api-key` header (never in a URL). Gemini
+lines share the app's 30-lines-per-minute cap with ElevenLabs (cache hits don't count).
 
 ---
 

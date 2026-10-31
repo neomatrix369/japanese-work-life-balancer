@@ -31,6 +31,7 @@ import { TourOverlay } from './components/TourOverlay';
 import { AboutModal } from './components/AboutModal';
 import { useTour, type TourController } from './tour/useTour';
 import { createNarrator } from './tour/voice';
+import { useVoiceProvider } from './tour/useVoiceProvider';
 import { weekDates } from './tour/narrate';
 import { DashboardSkeleton } from './components/DashboardSkeleton';
 import { AlertTriangle, ChevronsDownUp, Pin } from 'lucide-react';
@@ -244,6 +245,7 @@ export function App() {
   };
   const [narrator] = useState(createNarrator); // tour voice narration (POST /tts → browser voice fallback)
   const tour = useTour(tourController, { current: scheduleResponse, currency }, undefined, narrator);
+  const voiceProvider = useVoiceProvider(narrator); // top-bar voice picker (same narrator as the tour)
   const tourStep = tour.active ? tour.step : null;
   /** The tour may show a role (HR view) without changing the user's own choice. */
   const effectiveRole: Role = tourStep?.role ?? role;
@@ -321,6 +323,7 @@ export function App() {
         onPlayTour={tour.start}
         tourActive={tour.active}
         onAbout={() => setShowAbout(true)}
+        voice={voiceProvider}
         solving={solving}
         canSolve={!!selectedScenario && !modelDown}
         onSolve={handleSolve}

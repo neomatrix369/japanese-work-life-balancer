@@ -291,6 +291,8 @@ describe('App tour with the model down', () => {
     render(<App />);
     // -- When --
     fireEvent.click(screen.getByRole('button', { name: /Play demo/ }));
+    // Step 2 is About; advance to Step 3 (Plan 1)
+    fireEvent.click(await screen.findByRole('button', { name: /Next/ }));
     fireEvent.click(await screen.findByRole('button', { name: /Next/ }));
     // -- Then --
     expect(await screen.findByText(/recorded run/)).toBeInTheDocument();

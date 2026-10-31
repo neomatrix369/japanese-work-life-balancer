@@ -11,6 +11,7 @@ import {
   DEFAULT_VOICE_ID,
   MAX_TEXT_CHARS,
   createTtsHandler,
+  pickDefaultProvider,
   ttsCacheKey,
   type FetchLike,
   type TtsCache,
@@ -180,5 +181,104 @@ describe('POST /tts handler', () => {
       ttsCacheKey('OtherVoice123', DEFAULT_MODEL_ID, text),
     );
     expect(fetch.mock.calls[0][0]).toMatch(/\/text-to-speech\/OtherVoice123$/);
+  });
+});
+
+// ── Gemini providers ────────────────────────────────────────────────────────
+
+const GEMINI_KEY = 'placeholder-gemini-key';
+const WAV = new Uint8Array([0x52, 0x49, 0x46, 0x46, 9, 9]); // "RIFF…"
+const geminiAudio = () => upstream(200, JSON.stringify({ candidates: [{ content: { parts: [{ inlineData: { mimeType: 'audio/wav', data: btoa(String.fromCharCode(...WAV)) } }] } }] }));
+const argonText = (answer: string) =>
+  upstream(200, JSON.stringify({ candidates: [{ content: { parts: [{ text: 'thinking…', thought: true }, { text: answer }] } }] }));
+
+function geminiSetup(fetchImpl: FetchLike, elevenKey: string | undefined = KEY) {
+  const fetch = vi.fn(fetchImpl);
+  const handle = createTtsHandler(
+    { elevenlabs: { apiKey: elevenKey }, gemini: { apiKey: GEMINI_KEY } },
+    { fetch, cache: memoryCache(), now: () => 0, log: vi.fn() },
+  );
+  return { handle, fetch };
+}
+const sentBody = (fetch: ReturnType<typeof vi.fn>, i: number) => JSON.parse((fetch.mock.calls[i] as Parameters<FetchLike>)[1].body);
+
+describe('POST /tts with Gemini providers', () => {
+  it('keeps ElevenLabs as the default when both keys are set', async () => {
+    /**
+     * Scenario: a Gemini key is added next to the existing ElevenLabs key.
+     * Slice: voice provider picker — no regression.
+     * Given both keys, when a line arrives without a provider, then ElevenLabs speaks it.
+     */
+    // -- Given --
+    const { handle, fetch } = geminiSetup(async () => upstream(200, MP3));
+    // -- When --
+    const r = await handle({ text: 'Default voice.' });
+    // -- Then --
+    expect(r.contentType).toBe('audio/mpeg');
+    expect(fetch.mock.calls[0][0]).toMatch(/api\.elevenlabs\.io/);
+    expect(pickDefaultProvider(undefined, GEMINI_KEY, undefined)).toBe('gemini');
+    expect(pickDefaultProvider('gemini-argon', GEMINI_KEY, KEY)).toBe('gemini-argon');
+    expect(pickDefaultProvider('nonsense', undefined, undefined)).toBe('elevenlabs');
+  });
+
+  it('speaks with Gemini TTS, sends the key in a header (never the URL), and caches the wav', async () => {
+    /**
+     * Scenario: the presenter picks Gemini.
+     * Slice: voice provider picker — Gemini.
+     * Given a Gemini key, when the same line is asked twice, then Gemini is called once
+     * with the key in x-goog-api-key, and both answers are the decoded wav.
+     */
+    // -- Given --
+    const { handle, fetch } = geminiSetup(async () => geminiAudio());
+    // -- When --
+    const first = await handle({ text: 'Rest matters.', provider: 'gemini' });
+    const second = await handle({ text: 'Rest matters.', provider: 'gemini' });
+    // -- Then --
+    const [url, init] = fetch.mock.calls[0] as Parameters<FetchLike>;
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(url).toMatch(/gemini-3\.8-flash-tts:generateContent$/);
+    expect(url).not.toContain(GEMINI_KEY);
+    expect(init.headers['x-goog-api-key']).toBe(GEMINI_KEY);
+    expect(sentBody(fetch, 0).generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName).toBe('Aoede');
+    expect(first).toMatchObject({ status: 200, contentType: 'audio/wav', cache: 'miss' });
+    expect(Array.from(first.body as Uint8Array)).toEqual(Array.from(WAV));
+    expect(second.cache).toBe('hit');
+  });
+
+  it('with Gemini Argon, speaks Argon\'s answer (not its thoughts), or the original line if Argon fails', async () => {
+    /**
+     * Scenario: the presenter picks Gemini Argon for live commentary.
+     * Slice: voice provider picker — Argon.
+     * Given Argon answers with a thought part and an answer, when a line arrives, then the
+     * TTS call speaks only the answer; given Argon fails, then the original line is spoken.
+     */
+    // -- Given --
+    const ok = geminiSetup(async (url) => (url.includes('argon') ? argonText('Sato-san gets two days of rest.') : geminiAudio()));
+    const down = geminiSetup(async (url) => (url.includes('argon') ? upstream(500, '{}') : geminiAudio()));
+    // -- When --
+    const r = await ok.handle({ text: 'Sato-san: 2 rest days.', provider: 'gemini-argon' });
+    await down.handle({ text: 'Sato-san: 2 rest days.', provider: 'gemini-argon' });
+    // -- Then --
+    expect(r).toMatchObject({ status: 200, contentType: 'audio/wav' });
+    expect(ok.fetch.mock.calls[0][0]).toMatch(/gemini-4-argon:generateContent$/);
+    expect(sentBody(ok.fetch, 1).contents[0].parts[0].text).toBe('Sato-san gets two days of rest.');
+    expect(sentBody(down.fetch, 1).contents[0].parts[0].text).toBe('Sato-san: 2 rest days.');
+  });
+
+  it('answers 503 for a Gemini request when there is no Gemini key', async () => {
+    /**
+     * Scenario: Gemini is picked but GEMINI_API_KEY is not set.
+     * Slice: voice provider picker — fallback.
+     * Given no Gemini key, when Gemini is asked, then 503 and no upstream call (the
+     * browser voice takes over in the UI).
+     */
+    // -- Given --
+    const fetch = vi.fn(async () => geminiAudio());
+    const handle = createTtsHandler({ elevenlabs: { apiKey: KEY } }, { fetch, cache: memoryCache(), now: () => 0 });
+    // -- When --
+    const r = await handle({ text: 'Hello.', provider: 'gemini' });
+    // -- Then --
+    expect(r.status).toBe(503);
+    expect(fetch).not.toHaveBeenCalled();
   });
 });

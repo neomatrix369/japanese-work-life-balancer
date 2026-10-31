@@ -18,7 +18,7 @@ When the PRD and the build spec disagree, **the build spec wins** (it records de
 3. **No real personal data.** All names and data are synthetic and fictional. No health, family or age fields anywhere.
 4. **Never commit `timefold-license.pem`** or any secret. It lives in `~/timefold-license.pem`, `$TIMEFOLD_LICENSE_PATH`
    (a path) or `$TIMEFOLD_LICENSE` (the PEM contents — never echo it), and is only used by `make demo|model ENTERPRISE=1`.
-   The ElevenLabs key lives in `ui/.env.local` or the shell. Setup steps: `docs/external-services.md`.
+   The ElevenLabs and Gemini keys live in `ui/.env.local` or the shell. Setup steps: `docs/external-services.md`.
 5. **Stop at every phase checkpoint**, run the checks listed there, show the results, and wait for the user before
    starting the next phase.
 6. When unsure about a Timefold API, check the docs (`https://docs.timefold.ai/llms.txt`) instead of guessing.
@@ -38,7 +38,7 @@ japanese-work-life-balancer/
 ├── DEMO.md           # 5-minute demo script
 ├── .gitignore
 ├── docs/plan/        # PRD, questions, prompts
-├── docs/external-services.md  # ElevenLabs + Timefold accounts, keys, licence (outside the repo)
+├── docs/external-services.md  # ElevenLabs, Gemini + Timefold accounts, keys, licence (outside the repo)
 ├── docs/install-tools.md      # macOS / Linux / WSL from-scratch tool installation
 ├── docs/maintaining.md        # checks, regeneration, toolchain traps (human-facing)
 ├── docs/screenshots/ # gallery + README

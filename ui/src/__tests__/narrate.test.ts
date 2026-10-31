@@ -166,7 +166,7 @@ describe('TOUR_STEPS', () => {
       const text = step.text(ctx);
       // -- Then --
       expect(text, step.id).not.toMatch(BAD_TEXT);
-      if (step.id !== 'wrap' && step.id !== 'keep-cost') expect(text, step.id).toMatch(/\d/);
+      if (step.id !== 'wrap' && step.id !== 'keep-cost' && step.id !== 'about') expect(text, step.id).toMatch(/\d/);
       expect(dwellMs(text)).toBeGreaterThanOrEqual(6000);
       expect(dwellMs(text)).toBeLessThanOrEqual(9500);
     }
