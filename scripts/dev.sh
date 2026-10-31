@@ -13,29 +13,59 @@ MODEL_PID=""
 UI_PID=""
 MCP_PID=""
 
-# ── cleanup ────────────────────────────────────────────────────────────────────
-
-cleanup() {
-  printf '\nStopping services...\n'
-  [ -n "${MODEL_PID:-}" ] && kill "${MODEL_PID}" 2>/dev/null || true
-  [ -n "${UI_PID:-}"    ] && kill "${UI_PID}"    2>/dev/null || true
-  [ -n "${MCP_PID:-}"   ] && kill "${MCP_PID}"   2>/dev/null || true
-  # Give processes a moment; force-kill stragglers.
-  sleep 1
-  [ -n "${MODEL_PID:-}" ] && kill -9 "${MODEL_PID}" 2>/dev/null || true
-  [ -n "${UI_PID:-}"    ] && kill -9 "${UI_PID}"    2>/dev/null || true
-  [ -n "${MCP_PID:-}"   ] && kill -9 "${MCP_PID}"   2>/dev/null || true
-  printf 'Stopped.\n'
-}
-trap cleanup EXIT INT TERM
-
-# ── toolchain ─────────────────────────────────────────────────────────────────
-
 MVN="${MVN:-mvn}"
 ENTERPRISE="${ENTERPRISE:-}"
 # shellcheck disable=SC2086
 MVN_FLAGS="${ENTERPRISE:+-Denterprise}"
 MODEL_PORT="${MODEL_PORT:-8083}"
+UI_PORT=5173
+MCP_PORT=8765
+
+# ── pre-flight: refuse to start a second copy ─────────────────────────────────
+# Without this, Vite quietly moves to :5174 and the model/MCP fail, while the old copy
+# keeps answering — two UIs, one stale backend.
+
+busy=0
+for port in "${MODEL_PORT}" "${UI_PORT}" "${MCP_PORT}"; do
+  pids="$(lsof -ti "tcp:${port}" -sTCP:LISTEN 2>/dev/null || true)"
+  [ -z "${pids}" ] && continue
+  busy=1
+  for pid in ${pids}; do
+    printf 'ERROR: port %s is already in use by PID %s: %s\n' "${port}" "${pid}" \
+      "$(ps -o command= -p "${pid}" 2>/dev/null | cut -c1-110)"
+  done
+done
+if [ "${busy}" -eq 1 ]; then
+  printf '       Another copy of the app (or something else) is running. Stop it with:  make stop\n'
+  exit 1
+fi
+
+# ── cleanup ────────────────────────────────────────────────────────────────────
+
+# npm, mvn and uv start the real servers (vite, java, python) as child processes;
+# killing only the launcher leaves those holding the ports. Kill the whole tree.
+kill_tree() {
+  local sig="$1" pid="$2" child
+  for child in $(pgrep -P "${pid}" 2>/dev/null || true); do
+    kill_tree "${sig}" "${child}"
+  done
+  kill "-${sig}" "${pid}" 2>/dev/null || true
+}
+
+cleanup() {
+  trap - EXIT INT TERM
+  printf '\nStopping services...\n'
+  for pid in "${MODEL_PID}" "${UI_PID}" "${MCP_PID}"; do
+    [ -n "${pid}" ] && kill_tree TERM "${pid}"
+  done
+  # Give processes a moment; force-kill stragglers.
+  sleep 2
+  for pid in "${MODEL_PID}" "${UI_PID}" "${MCP_PID}"; do
+    [ -n "${pid}" ] && kill_tree KILL "${pid}"
+  done
+  printf 'Stopped.\n'
+}
+trap cleanup EXIT INT TERM
 
 # ── start model ───────────────────────────────────────────────────────────────
 

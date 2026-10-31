@@ -311,6 +311,38 @@ describe('POST /tts with Gemini providers', () => {
     expect(sentBody(down.fetch, 1).contents[0].parts[0].text).toBe('Sato-san gets 2 days off.');
   });
 
+  it('passes on Gemini\'s 429 wait and stays off Gemini until that wait is over', async () => {
+    /**
+     * Scenario: the Gemini key hits its per-minute limit mid-tour.
+     * Slice: voice narration — rate-limit recovery.
+     * Given Gemini answers 429 RESOURCE_EXHAUSTED with retryDelay "17s", when a line is asked,
+     * then we answer 429 with retryAfterMs 17000; a line asked 5 s later gets 429 with the
+     * remaining 12000 ms and no upstream call; a line asked after the wait reaches Gemini again.
+     */
+    // -- Given --
+    let t = 0;
+    const exhausted = upstream(429, JSON.stringify({
+      error: { status: 'RESOURCE_EXHAUSTED', details: [{ '@type': 'type.googleapis.com/google.rpc.RetryInfo', retryDelay: '17s' }] },
+    }));
+    const fetch = vi.fn<FetchLike>().mockResolvedValueOnce(exhausted).mockResolvedValue(geminiAudio());
+    const handle = createTtsHandler({ gemini: { apiKey: GEMINI_KEY } }, { fetch, cache: memoryCache(), now: () => t, log: vi.fn() });
+    // -- When --
+    const first = await handle({ text: 'One.', provider: 'gemini' });
+    t = 5_000;
+    const cooling = await handle({ text: 'Two.', provider: 'gemini' });
+    t = 17_000;
+    const after = await handle({ text: 'Three.', provider: 'gemini' });
+    // -- Then --
+    expect(first.status).toBe(429);
+    expect(JSON.parse(asText(first))).toEqual({
+      error: 'rate_limited', upstreamStatus: 429, upstreamError: 'resource_exhausted', retryAfterMs: 17_000,
+    });
+    expect(cooling.status).toBe(429);
+    expect(JSON.parse(asText(cooling)).retryAfterMs).toBe(12_000);
+    expect(after).toMatchObject({ status: 200, contentType: 'audio/wav' });
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
   it('answers 503 for a Gemini request when there is no Gemini key', async () => {
     /**
      * Scenario: Gemini is picked but GEMINI_API_KEY is not set.

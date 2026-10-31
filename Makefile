@@ -16,7 +16,7 @@ ifneq ($(JAVA_HOME),)
 endif
 
 .DEFAULT_GOAL := help
-.PHONY: help check setup data model ui mcp demo test clean
+.PHONY: help check setup data model ui mcp demo stop warm-voice test clean
 
 # ── help (default) ────────────────────────────────────────────────────────────
 
@@ -30,7 +30,9 @@ help:
 	@printf '  model   start Quarkus solver on :8083  (keep terminal open)\n'
 	@printf '  ui      start Vite dev server on :5173  (keep terminal open)\n'
 	@printf '  mcp     start MCP server on :8765       (keep terminal open)\n'
-	@printf '  demo    data + model + ui + mcp; Ctrl-C stops all\n'
+	@printf '  demo    data + model + ui + mcp; Ctrl-C stops all (refuses if already running)\n'
+	@printf '  stop    stop anything listening on :8083, :5173, :8765 (a leftover demo)\n'
+	@printf '  warm-voice  pre-record the fixed tour lines (UI running; PROVIDER=gemini)\n'
 	@printf '  test    run model unit tests (model must NOT be running)\n'
 	@printf '  clean   remove build outputs and data-gen/out/\n'
 	@printf '\nToolchain overrides:\n'
@@ -163,6 +165,24 @@ mcp:
 
 demo: data
 	@bash scripts/dev.sh
+
+# ── stop (frees the app's ports, e.g. after a demo that did not shut down) ────
+
+stop:
+	@for port in 8083 5173 8765; do \
+	  pids=$$(lsof -ti tcp:$$port -sTCP:LISTEN 2>/dev/null); \
+	  if [ -n "$$pids" ]; then echo "  :$$port  stopping PID $$pids"; kill $$pids 2>/dev/null; \
+	  else echo "  :$$port  free"; fi; \
+	done; \
+	sleep 2; \
+	left=$$(lsof -ti tcp:8083,5173,8765 -sTCP:LISTEN 2>/dev/null); \
+	if [ -n "$$left" ]; then kill -9 $$left 2>/dev/null; echo "  force-stopped PID $$left"; fi
+
+# ── warm-voice (pre-record the tour's fixed lines; needs `make ui` running) ───
+
+PROVIDER ?= gemini
+warm-voice:
+	cd ui && npx vite-node scripts/warm-voice.ts -- $(PROVIDER)
 
 # ── test ──────────────────────────────────────────────────────────────────────
 

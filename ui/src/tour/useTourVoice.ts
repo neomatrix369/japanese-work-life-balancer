@@ -5,7 +5,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { NarrationCtx, TourStep } from './steps';
-import { unspokenTail, type Narrator } from './voice';
+import { toSpeech, unspokenTail, type Narrator } from './voice';
 import { useVoiceProvider, type VoiceProviderState } from './useVoiceProvider';
 
 export interface TourVoice {
@@ -43,6 +43,16 @@ export function spokenLine(step: TourStep, ctx: NarrationCtx): string {
 export function nextLine(steps: TourStep[], index: number, ctx: NarrationCtx): string | null {
   const s = steps[index + 1];
   return s ? spokenLine(s, ctx) : null;
+}
+
+/**
+ * Lines the tour speaks the same way every run (they use no solver numbers), already in
+ * spoken form — the ones worth pre-recording. Lines that wait on a plan are left out.
+ */
+export function fixedLines(steps: TourStep[], teamSize: number | null): string[] {
+  const ctx: NarrationCtx = { current: null, results: {}, currency: 'JPY', running: false, teamSize };
+  const lines = steps.map((s) => spokenLine(s, ctx)).filter((l) => !l.startsWith('Waiting for'));
+  return [...new Set(lines.map(toSpeech))];
 }
 
 interface VoiceState {

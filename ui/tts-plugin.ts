@@ -202,27 +202,45 @@ export function parseTtsText(body: unknown): string | null {
   return parseTtsBody(body)?.text ?? null;
 }
 
-async function upstreamErrorCode(res: UpstreamResponse): Promise<string> {
-  try {
-    const parsed = JSON.parse(await res.text()) as { detail?: { status?: unknown }; error?: { message?: unknown; status?: unknown } };
-    const code = parsed?.detail?.status ?? parsed?.error?.status;
-    if (typeof code === 'string' && /^[a-z0-9_]{1,64}$/i.test(code)) return code.toLowerCase();
-  } catch {
-    // non-JSON body
-  }
-  return 'upstream_error';
+/** Wait used when an upstream 429 does not say how long to back off. */
+export const DEFAULT_RETRY_AFTER_MS = 10_000;
+
+interface UpstreamError {
+  code: string;
+  /** Gemini's RetryInfo.retryDelay ("17s", "0.5s") in ms, when present */
+  retryAfterMs?: number;
 }
 
+async function upstreamError(res: UpstreamResponse): Promise<UpstreamError> {
+  try {
+    const parsed = JSON.parse(await res.text()) as {
+      detail?: { status?: unknown };
+      error?: { status?: unknown; details?: { retryDelay?: unknown }[] };
+    };
+    const raw = parsed?.detail?.status ?? parsed?.error?.status;
+    const code = typeof raw === 'string' && /^[a-z0-9_]{1,64}$/i.test(raw) ? raw.toLowerCase() : 'upstream_error';
+    const delay = (parsed?.error?.details ?? []).map((d) => d?.retryDelay).find((d) => typeof d === 'string');
+    const secs = typeof delay === 'string' ? Number.parseFloat(delay) : Number.NaN;
+    return Number.isFinite(secs) ? { code, retryAfterMs: Math.ceil(secs * 1000) } : { code };
+  } catch {
+    return { code: 'upstream_error' }; // non-JSON body
+  }
+}
+
+/** Returns 0 when a call may go upstream now, else the ms until the oldest call leaves the window. */
 function rateLimiter(perMinute: number, now: () => number) {
   const calls: number[] = [];
-  return () => {
+  return (): number => {
     const t = now();
     while (calls.length > 0 && t - calls[0] >= 60_000) calls.shift();
-    if (calls.length >= perMinute) return false;
+    if (calls.length >= perMinute) return 60_000 - (t - calls[0]);
     calls.push(t);
-    return true;
+    return 0;
   };
 }
+
+const rateLimited = (retryAfterMs: number, extra: Record<string, unknown> = {}): TtsResult =>
+  json(429, { error: 'rate_limited', ...extra, retryAfterMs });
 
 const ARGON_INSTRUCTION =
   'You are an empathetic workplace wellbeing narrator for a Japanese work-life balance dashboard. Rephrase the input into one or two natural, spoken sentences highlighting human wellbeing, rest, and safety. Do not output markdown, bullet points, or commentary prefixes.';
@@ -278,7 +296,26 @@ export function createTtsHandler(
   deps: TtsDeps,
   perMinute: number = MAX_UPSTREAM_PER_MINUTE,
 ): (body: unknown) => Promise<TtsResult> {
-  const allow = rateLimiter(perMinute, deps.now);
+  const waitBeforeCall = rateLimiter(perMinute, deps.now);
+  /**
+   * After an upstream 429, answer 429 locally until the provider's wait is over: each extra
+   * call while limited only burns quota and can lengthen the penalty.
+   */
+  const coolingUntil: Partial<Record<'elevenlabs' | 'gemini', number>> = {};
+  const gate = (upstream: 'elevenlabs' | 'gemini'): TtsResult | null => {
+    const cooling = (coolingUntil[upstream] ?? 0) - deps.now();
+    if (cooling > 0) return rateLimited(cooling, { upstreamStatus: 429 });
+    const wait = waitBeforeCall();
+    return wait > 0 ? rateLimited(wait) : null;
+  };
+  const upstreamFailed = async (upstream: 'elevenlabs' | 'gemini', res: UpstreamResponse): Promise<TtsResult> => {
+    const { code, retryAfterMs } = await upstreamError(res);
+    deps.log?.(`[tts] ${upstream} upstream ${res.status} ${code}`);
+    if (res.status !== 429) return json(502, { error: code, upstreamStatus: res.status });
+    const wait = retryAfterMs ?? DEFAULT_RETRY_AFTER_MS;
+    coolingUntil[upstream] = deps.now() + wait;
+    return rateLimited(wait, { upstreamStatus: 429, upstreamError: code });
+  };
 
   const eleven: ElevenLabsConfig = {
     apiKey: config.elevenlabs?.apiKey ?? config.apiKey,
@@ -316,7 +353,8 @@ export function createTtsHandler(
       if (cached) return { status: 200, contentType: 'audio/mpeg', body: cached, cache: 'hit' };
 
       if (!eleven.apiKey) return json(503, { error: 'tts_not_configured' });
-      if (!allow()) return json(429, { error: 'rate_limited' });
+      const limited = gate('elevenlabs');
+      if (limited) return limited;
 
       let res: UpstreamResponse;
       try {
@@ -334,11 +372,7 @@ export function createTtsHandler(
         return json(503, { error: 'upstream_unreachable' });
       }
 
-      if (!res.ok) {
-        const code = await upstreamErrorCode(res);
-        deps.log?.(`[tts] elevenlabs upstream ${res.status} ${code}`);
-        return json(502, { error: code, upstreamStatus: res.status });
-      }
+      if (!res.ok) return upstreamFailed('elevenlabs', res);
 
       const audio = new Uint8Array(await res.arrayBuffer());
       await deps.cache.put(key, audio).catch(() => deps.log?.('[tts] cache write failed'));
@@ -365,7 +399,8 @@ export function createTtsHandler(
       if (cached) return { status: 200, contentType: 'audio/wav', body: cached, cache: 'hit' };
 
       if (!gemini.apiKey) return json(503, { error: 'tts_not_configured' });
-      if (!allow()) return json(429, { error: 'rate_limited' });
+      const limited = gate('gemini');
+      if (limited) return limited;
 
       // If the rewrite fails, the original line is spoken rather than going silent.
       const textToSpeak = rewrite
@@ -396,11 +431,7 @@ export function createTtsHandler(
         return json(503, { error: 'upstream_unreachable' });
       }
 
-      if (!res.ok) {
-        const code = await upstreamErrorCode(res);
-        deps.log?.(`[tts] gemini upstream ${res.status} ${code}`);
-        return json(502, { error: code, upstreamStatus: res.status });
-      }
+      if (!res.ok) return upstreamFailed('gemini', res);
 
       let b64: string | undefined;
       try {

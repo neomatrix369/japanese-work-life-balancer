@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [react(), ttsPlugin()],
   server: {
     port: 5173,
+    strictPort: true, // fail loudly instead of quietly starting a second UI on :5174
     proxy: {
       '/api': {
         target: 'http://localhost:8083',
