@@ -8,8 +8,9 @@
 import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
 import React from 'react';
 import { TourOverlay } from '../components/TourOverlay';
-import type { TourStep } from '../tour/steps';
+import { TOUR_STEPS, type TourStep } from '../tour/steps';
 import { useTour, type TourController } from '../tour/useTour';
+import { fixedLines } from '../tour/useTourVoice';
 import {
   MUTE_STORAGE_KEY,
   PROVIDER_STORAGE_KEY,
@@ -170,6 +171,28 @@ describe('toSpeech', () => {
   });
 });
 
+describe('fixedLines', () => {
+  it('lists the lines that never use solver numbers, in spoken form', () => {
+    /**
+     * Scenario: the presenter pre-records the tour voice before a demo.
+     * Slice: voice narration — warm-up (make warm-voice).
+     * Given the real tour steps and a team of 50, when the fixed lines are listed, then the
+     * intro names the team, each solve step's opening line is there in spoken form, and no
+     * line waits on a plan.
+     */
+    // -- Given / When --
+    const lines = fixedLines(TOUR_STEPS, 50);
+    // -- Then --
+    expect(lines[0]).toMatch(/^Meet a Tokyo company with 50 employees\./);
+    expect(lines).toContain(
+      'Same week, same people. Now the solver puts health first. Every 2 seconds the solver finds a better plan. Watch the numbers move. Waiting for the first plan.',
+    );
+    expect(lines.at(-1)).toMatch(/^Hard rules are never broken\./);
+    expect(lines.some((l) => l.startsWith('Waiting for'))).toBe(false);
+    expect(lines).toHaveLength(6);
+  });
+});
+
 // ── Narrator ────────────────────────────────────────────────────────────────
 
 describe('createNarrator', () => {
@@ -226,6 +249,44 @@ describe('createNarrator', () => {
     speech.end();
     await p;
     expect(done).toBe(true);
+  });
+
+  it('after a 429, waits only the server\'s retryAfterMs before trying the premium voice again', async () => {
+    /**
+     * Scenario: Gemini is briefly rate limited during the tour.
+     * Slice: voice narration — rate-limit recovery (no page refresh).
+     * Given /tts answers 429 {retryAfterMs: 3000} once and audio after that, when a line is
+     * spoken, then the browser voice reads it; a line 1 s later stays on the browser voice
+     * without asking /tts; a line after 3 s goes back to the premium voice.
+     */
+    // -- Given --
+    let t = 0;
+    const limited = {
+      ...errorResponse(429),
+      json: async () => ({ error: 'rate_limited', retryAfterMs: 3000 }),
+    };
+    const fetch = vi.fn().mockResolvedValueOnce(limited).mockResolvedValue(audioResponse());
+    const { narrator, speech, audio } = narratorWith(fetch as unknown as NarratorDeps['fetch'], { now: () => t });
+    // -- When --
+    void narrator.speak('First line.');
+    await flush();
+    const afterFirst = narrator.voice();
+    speech.end();
+    t = 1000;
+    void narrator.speak('Second line.');
+    await flush();
+    const callsWhileLimited = fetch.mock.calls.length;
+    speech.end();
+    t = 3000;
+    void narrator.speak('Third line.');
+    await flush();
+    // -- Then --
+    expect(afterFirst).toBe('browser');
+    expect(callsWhileLimited).toBe(1);
+    expect(speech.spoken.map((u) => u.text)).toEqual(['First line.', 'Second line.']);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(narrator.voice()).toBe('premium');
+    expect(audio.play).toHaveBeenCalled();
   });
 
   it('falls back to the browser voice when /tts takes longer than 4 s', async () => {

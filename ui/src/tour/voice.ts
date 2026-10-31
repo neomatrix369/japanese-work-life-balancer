@@ -195,7 +195,24 @@ interface SpeechLike {
   getVoices(): SpeechSynthesisVoice[];
 }
 
-type FetchLike = (url: string, init: RequestInit) => Promise<Pick<Response, 'ok' | 'headers' | 'blob'>>;
+type FetchLike = (
+  url: string,
+  init: RequestInit,
+) => Promise<Pick<Response, 'ok' | 'headers' | 'blob'> & Partial<Pick<Response, 'status' | 'json'>>>;
+
+/** Shortest browser-voice spell after a 429, so a tiny server wait does not cause a retry storm. */
+const MIN_RATE_LIMIT_BACKOFF_MS = 1000;
+
+/** The server's `retryAfterMs` from a 429 body, or null when it is not a 429 or says nothing. */
+async function retryAfterMs(res: Awaited<ReturnType<FetchLike>>): Promise<number | null> {
+  if (res.status !== 429 || !res.json) return null;
+  try {
+    const body = (await res.json()) as { retryAfterMs?: unknown };
+    return typeof body.retryAfterMs === 'number' && body.retryAfterMs > 0 ? body.retryAfterMs : null;
+  } catch {
+    return null;
+  }
+}
 
 export interface NarratorDeps {
   fetch: FetchLike | null;
@@ -207,7 +224,7 @@ export interface NarratorDeps {
   timeoutMs: number;
   /** per-provider waits that override `timeoutMs` */
   providerTimeoutMs: Partial<Record<VoiceProvider, number>>;
-  /** after a /tts failure, use the browser voice for this long before trying again */
+  /** after a /tts failure, use the browser voice for this long before trying again (a 429 uses the server's shorter wait) */
   retryAfterMs: number;
   now: () => number;
 }
@@ -330,6 +347,13 @@ export function createNarrator(overrides: Partial<NarratorDeps> = {}): Narrator 
         });
         if (res.ok && (res.headers.get('content-type') ?? '').includes('audio')) {
           return d.createObjectURL(await res.blob());
+        }
+        // Rate limited: wait only as long as the server says, then the premium voice comes
+        // back by itself (no page refresh needed).
+        const wait = await retryAfterMs(res);
+        if (wait !== null) {
+          serverOffUntil = d.now() + Math.min(d.retryAfterMs, Math.max(MIN_RATE_LIMIT_BACKOFF_MS, wait));
+          return null;
         }
       } catch {
         // network error — fall through to the browser voice
