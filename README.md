@@ -1,5 +1,7 @@
 # Japanese Work-Life Balancer
 
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+
 A weekly scheduling tool that **prevents overwork** by treating employee health as a hard constraint, not
 an afterthought. Built for Hack for Humanity London 2026-10-29.
 
@@ -598,6 +600,9 @@ The default is 30 seconds; the maximum accepted value is 60.
 ---
 
 ## Credits and license
+
+This project is licensed under the **[Apache License 2.0](LICENSE)** — the same license as the
+[Timefold quickstart](https://github.com/TimefoldAI/timefold-quickstarts) it derives from.
 
 Built at Hack for Humanity London 2026-10-29 by Mani Sarkar ([@neomatrix369](https://github.com/neomatrix369))
 in collaboration with Risako ([@inforisako](https://github.com/inforisako)).
