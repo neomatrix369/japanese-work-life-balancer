@@ -321,6 +321,21 @@ solve with `health-first`, and the compare panel shows fewer at-risk employees a
 
 Presentation only: the voice chosen never changes the schedule, scores or KPIs.
 
+**Why:** the narrator always speaks one fixed ElevenLabs voice (Lily, from `ELEVENLABS_VOICE_ID`) and can run out of credits mid-tour. The team wants a curated set of quality English and Japanese voices, a credit-aware fallback, and an Auto choice that makes both decisions per line. Manual choices keep working.
+
+**Decisions taken:** curated quality list (no API quality score exists); ElevenLabs while credits are at least 10%, then Gemini if allowed, then the browser voice; Auto is the default; with no ElevenLabs key, Gemini if allowed, else the browser voice. Lily stays the English default voice.
+
+**Reuse first (no parallel paths):** `GEMINI_VOICE_OPTIONS`, `GEMINI_JA_VOICES`, `optionKey`, `resolveGeminiVoice`, `ttsCacheKey`, `coolingUntil`, the per-minute rate limiter and `diskCache` in `ui/tts-plugin.ts` and `ui/src/tour/voice.ts`. Keep the new logic in small pure functions with `fetch` and `now` injected, so tests run offline.
+
+**Files to change**
+- `ui/tts-plugin.ts`: voice pool, `fetchElevenCredits`, `pickElevenVoice`, Gemini guard, extracted `elevenSpeak` and `geminiSpeak`, the `elevenlabs-auto` branch, `VoiceProvider` union, `FetchLike` type, `GET /tts`.
+- `ui/src/tour/voice.ts`: `PROVIDER_IDS`, `MULTI_VOICE`, `VoiceProvider`, the saved-choice fallback, `X-TTS-Provider` handling.
+- `ui/src/components/VoicePicker.tsx`: labels for the new entries and the served-by note.
+- `ui/scripts/warm-voice.ts`: accept `elevenlabs-auto` (currently only `gemini`, `gemini-argon`, `elevenlabs`).
+- `Makefile`: `warm-voice` help text.
+- `ui/src/__tests__/ttsPlugin.test.ts`, `ui/src/__tests__/voice.test.tsx`: the tests below.
+- Docs listed under "Docs to update when this ships" below.
+
 - **Default:** `elevenlabs-auto` (Auto) when an ElevenLabs key is set. Without one: Gemini if allowed, else the browser voice.
 - **Pool:** `ELEVENLABS_VOICE_OPTIONS` in `ui/tts-plugin.ts`, entries `{ voiceId, label, lang: 'en' | 'ja', rank }`. At least 3 English and 2 Japanese voices, each ear-checked with `eleven_multilingual_v2`. Placeholders are marked `// MOCK:`. Find candidates with `GET /v2/voices?language=…&high_quality=true` (confirm the parameters in the ElevenLabs docs first). The API has no quality score, so `rank` lives in code.
 - **Language:** Japanese if the line has kana or kanji, otherwise English. An empty pool for a language skips ElevenLabs for that language.
