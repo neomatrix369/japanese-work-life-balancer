@@ -334,9 +334,40 @@ Presentation only: the voice chosen never changes the schedule, scores or KPIs.
 - **Served-by:** the response header `X-TTS-Provider` names the engine that spoke the line. The picker shows it.
 - **Migration:** a saved bare `elevenlabs` choice maps to the first curated voice.
 
-Tests: `ui/src/__tests__/ttsPlugin.test.ts` and `ui/src/__tests__/voice.test.tsx` (full list in the plan file's Tests section).
+**Tests** (write first, with `/tdd`; interview the user before writing them, per the project rules). Files: `ui/src/__tests__/ttsPlugin.test.ts`, `ui/src/__tests__/voice.test.tsx`.
+- `pickElevenVoice`: English text gets an `en` voice; Japanese text gets a `ja` voice; below 10% returns `null`; a line that would drop the account below 10% returns `null`; a populated `en` pool with an empty `ja` pool sends Japanese lines to Gemini or the browser; an empty pool returns `null`.
+- `fetchElevenCredits`: parses `character_limit` and `character_count`; success cached 5 minutes; failure cached 60 seconds; a network error returns "unknown" and is not retried on every line.
+- Quota error: an ElevenLabs quota response sets the "credits exhausted" window and routes to Gemini or the browser, not a 502.
+- Gemini guard: tier unset blocks Gemini; `paid` with budget above 10% allows it; budget below 10% blocks it; cooldown blocks it; config changes apply without a restart.
+- Handler: `elevenlabs-auto` calls the chosen voice in the URL; a cached line for the chosen voice is a hit; a `voiceId` not in the pool gets 400.
+- Fallback response: the `X-TTS-Provider` header names the provider that served the line.
+- `GET /tts`: lists Auto and every curated voice; unkeyed entries are unconfigured; credits are returned as cached or "unknown" without a network wait.
+- Client: a saved bare `elevenlabs` maps to the first curated voice.
 
-**Checkpoint 3b (after the voice build):** `make ui`, then `make warm-voice PROVIDER=elevenlabs-auto` (a second run reports cache hits). Play one English and one Japanese line and confirm they use different voices. Lower the credit threshold temporarily to check the Gemini and browser fallbacks, and that the served-by note changes. `bash scripts/check-tts.sh` still passes with the real key.
+**Acceptance criteria**
+1. The curated pool has at least 3 English and at least 2 Japanese voices, each ear-checked.
+2. With credits above 10%, English lines use an English pool voice and Japanese lines use a Japanese pool voice.
+3. Below 10% (or on a quota error), lines go to Gemini only if the guard allows it, otherwise to the browser voice. No line returns a 502 to the tour.
+4. Gemini is never chosen automatically on the free tier or with budget below 10%.
+5. Every provider change is visible in the picker (served-by note).
+6. All existing tests still pass, and the new tests above pass.
+
+**Verification**
+1. `cd ui && npm test && npx tsc --noEmit && npm run build`.
+2. Browser check at 1280 px and 390 px (`/browser-ui-qa`): Auto is the default, the curated voices appear, and English and Japanese lines sound different.
+3. `bash scripts/check-tts.sh` still passes with the real key.
+
+**Open risks**
+- Quality is a human judgement. The curated list is only as good as the ear test.
+- The quota error code is unverified until Step 0 confirms it in the ElevenLabs docs.
+- Credits can lag. The 10% rule and the line-length check give a buffer, but the account can still run out between checks.
+- With `GEMINI_TIER` unset and no ElevenLabs key, the narrator uses the browser voice. The browser's Japanese quality is not guaranteed.
+- `GEMINI_BUDGET_LEFT_PCT` goes stale unless someone updates it. With the tier set to paid and no budget value, only the 429 cooldown limits spend.
+- Japanese detection is a heuristic. Mixed text, or English lines that should be spoken in Japanese, may pick the wrong voice. Tagging the fixed tour lines with an explicit language is a possible follow-up.
+
+**Docs to update when this ships** (kept out of the setup guide until then): `README.md` (voice narration section, env table rows for `TTS_PROVIDER`, `GEMINI_TIER`, `GEMINI_BUDGET_LEFT_PCT`), `DEMO.md` (warm-voice step), `docs/external-services.md` (Auto section, credits troubleshooting, Gemini guard and its env vars), `docs/maintaining.md`, `ui/.env.example`, and the `Makefile` help text.
+
+**Checkpoint 3b (after the voice build):** `make ui`, then `make warm-voice PROVIDER=elevenlabs-auto` (a second run reports cache hits). Play one English and one Japanese line and confirm they use different voices. Lower the credit threshold temporarily to check the Gemini and browser fallbacks, and that the served-by note changes.
 
 ---
 
