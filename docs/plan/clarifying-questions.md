@@ -175,6 +175,27 @@ The PRD says health comes before cost, yet nothing in the score protects it beyo
 
 ---
 
+## H. Tour narration voice (added 2026-11-21)
+
+Answers from the voice-selection planning. These extend the build, they don't change the scheduling scope.
+
+**32. How is "quality" judged for the ElevenLabs voices?**
+[Answer: a curated list of voices the team checked by ear (at least 3 English and 2 Japanese), ranked in code. The ElevenLabs API has no quality score.]
+
+**33. What happens when ElevenLabs credits are low?**
+[Answer: below 10% of the monthly characters, ElevenLabs is skipped. The line then goes to Gemini if it is allowed, otherwise to the browser voice.]
+
+**34. Can Gemini be picked automatically?**
+[Answer: no on the free tier. Only with `GEMINI_TIER=paid`, and budget above 10% if `GEMINI_BUDGET_LEFT_PCT` is set. Manual choices still work.]
+
+**35. What is the default voice?**
+[Answer: Auto (ElevenLabs), when an ElevenLabs key is set. With no ElevenLabs key: Gemini if allowed, otherwise the browser voice.]
+
+**36. Does "90% credits left" mean skip at 90% used?**
+[Answer: no. It was read as a typo for 10% left, so the threshold is 10% left. Confirm if you meant otherwise.]
+
+---
+
 ## Proposed layout (inside the existing folder)
 
 ```
