@@ -14,6 +14,22 @@ outside this repo, what each one adds, and exactly how to set it up.
 
 ---
 
+## Auto voice (default when an ElevenLabs key is set)
+
+With `ELEVENLABS_API_KEY` present, the tour uses **Auto** (`elevenlabs-auto`) by default. Auto picks the best voice per line:
+
+1. **ElevenLabs** — the top-ranked pool voice for the line's language (English or Japanese), while at least 10% of your monthly characters remain. Unknown credits fail open.
+2. **Gemini** — only when `GEMINI_TIER=paid` and `GEMINI_BUDGET_LEFT_PCT` is unset or at least 10, and Gemini is not in a 429 cooldown.
+3. **Browser voice** — the final fallback.
+
+The **Voice** picker shows a "Spoken by …" note whenever the actual engine differs from your selection (e.g. Auto used the browser voice because credits ran low).
+
+**Credits troubleshooting.** The credit check calls `GET /v1/user/subscription`. It needs the `user_read` permission on the ElevenLabs API key. Without it the response is not OK and credits show as "unknown" — Auto still uses ElevenLabs (fail-open), but the 10% guard is skipped. Add `user_read` to the key's permissions if you want the guard to work.
+
+**Gemini guard.** Auto never chooses Gemini automatically unless `GEMINI_TIER=paid`. This prevents surprise Gemini spend on free-tier accounts. Set `GEMINI_BUDGET_LEFT_PCT` to a number (0–100) to cap how much of the Gemini budget Auto may use; leave it unset for no budget limit beyond the per-minute rate cap. Both variables are read on every request, so changes apply without a restart.
+
+---
+
 ## ElevenLabs (premium tour voice)
 
 The tour works without ElevenLabs: if no key is set, or ElevenLabs fails or takes longer than 4 s, your browser's own

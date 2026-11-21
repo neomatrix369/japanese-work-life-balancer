@@ -68,6 +68,19 @@ Headless Chrome on macOS speaks through the real speakers. Any Playwright or Pup
 The app stores its theme in `localStorage`, not the OS setting, so emulating `prefers-color-scheme: dark` does nothing;
 click the **Dark theme** button instead.
 
+## ElevenLabs voice pool
+
+The curated pool lives in `ELEVENLABS_VOICE_OPTIONS` near the top of `ui/tts-plugin.ts`. Each entry has a `voiceId`, a `label`, a `lang` (`en` or `ja`), and a `rank`. The lowest rank wins when Auto picks a voice for a line.
+
+Four voices are marked `// MOCK: not ear-checked yet`: George, Brian (English), Alice, Charlotte (Japanese). To replace one after an ear-check:
+
+1. Find a premade voice on `GET /v2/voices?voice_type=default` (needs an ElevenLabs key). Premade voices need no "Add to My Voices" step and work on the free tier.
+2. Listen to it with `eleven_multilingual_v2` on a Japanese-name-heavy line (e.g. "Tanaka-san worked 4 days this week").
+3. Update the `voiceId` and `label` in `ELEVENLABS_VOICE_OPTIONS` and remove the `// MOCK:` comment.
+4. Delete `ui/.tts-cache/` so the new voice is recorded fresh on the next run.
+
+Do not use Voice Library (`GET /v1/shared-voices`) voices: some are paid-only, some cost 2× credits per character, and they cannot be used through the API on a free-tier account.
+
 ## Secrets
 
 - ElevenLabs and Gemini keys: `ui/.env.local` or your shell, never a committed file. `.env`, `.env.local` and `*.pem` are git-ignored.

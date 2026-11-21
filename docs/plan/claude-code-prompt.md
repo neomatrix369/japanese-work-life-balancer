@@ -317,7 +317,7 @@ solve with `health-first`, and the compare panel shows fewer at-risk employees a
 
 ### Tour narration voice (`ui/tts-plugin.ts`, `ui/src/tour/voice.ts`)
 
-**Status: DECIDED, not built yet.** This section is the build spec. The current code has none of it.
+**Status: BUILT 2026-11-21.** 4 pool voices (George, Brian, Alice, Charlotte) are still `// MOCK:` — pending an ear-check with `eleven_multilingual_v2`.
 
 Presentation only: the voice chosen never changes the schedule, scores or KPIs.
 

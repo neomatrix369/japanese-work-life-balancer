@@ -283,7 +283,8 @@ Play demo) or next to 🔊 in the tour controls (mid-demo — it applies from th
 
 | Voice | Needs | First play of a line | What you hear |
 |---|---|---|---|
-| ElevenLabs *(default)* | `ELEVENLABS_API_KEY` | ~1.5 s | "Lily", reading the step text |
+| **Auto** *(default with key)* | `ELEVENLABS_API_KEY` | ~1.5 s | ElevenLabs while credits last (Lily for English, Alice for Japanese), then Gemini if its guard allows, then the browser voice. The picker shows which engine spoke each line. |
+| ElevenLabs · Lily / George / Brian / Alice / Charlotte | `ELEVENLABS_API_KEY` | ~1.5 s | A curated set of English and Japanese premade voices. Lily is the English default. |
 | Gemini · Aoede / Sulafat / Achernar / Vindemiatrix / Gacrux / Achird | `GEMINI_API_KEY` | ~3–6 s | Gemini TTS reading the step text; six voices picked by ear (breezy, warm, soft, gentle, mature, friendly) |
 | Gemini Argon | `GEMINI_API_KEY` | ~7–17 s | Argon rewrites the step as short wellbeing commentary, then Gemini TTS reads it |
 | 日本語 · Sulafat / Achird | `GEMINI_API_KEY` | ~6–7 s | Japanese: each step is translated (`gemini-3.8-flash`), then spoken in Japanese |
@@ -326,7 +327,9 @@ from your shell first, then `ui/.env.local`, then `ui/.env`.
 | `GEMINI_VOICE_NAME` | Optional | `Aoede` | Gemini voice (e.g. `Kore`, `Puck`, `Charon`). Read once at start-up |
 | `GEMINI_TTS_MODEL` / `GEMINI_ARGON_MODEL` | Optional | `gemini-3.8-flash-tts` / `gemini-4-argon` | Read once at start-up |
 | `GEMINI_TRANSLATE_MODEL` | Optional | `gemini-3.8-flash` | Translates lines for the Japanese voices (thinking switched off for speed). Read once at start-up |
-| `TTS_PROVIDER` | Optional | `elevenlabs` if its key is set, else `gemini` | Voice used until someone picks one in the dropdown |
+| `TTS_PROVIDER` | Optional | `elevenlabs-auto` if an ElevenLabs key is set, else `gemini` if allowed, else `browser` | Default voice until someone picks one in the dropdown. Accepts `elevenlabs-auto`, `elevenlabs`, `gemini`, `gemini-argon`, `gemini-ja`, `browser`. |
+| `GEMINI_TIER` | Optional | — | Set to `paid` to allow Auto to fall back to Gemini when ElevenLabs credits run low. Without this, Gemini is never chosen automatically |
+| `GEMINI_BUDGET_LEFT_PCT` | Optional | — | Auto skips Gemini when this is set below 10. Unset means no budget limit beyond the per-minute rate cap. Read on every request |
 
 Check what the server is using: `curl -s localhost:5173/tts` prints the default voice and which providers have a
 key, and `.logs/ui.log` shows `geminiKey=present|missing elevenLabsKey=present|missing`. Spoken lines are cached in
