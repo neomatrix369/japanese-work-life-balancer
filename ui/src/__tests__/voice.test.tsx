@@ -3,7 +3,8 @@
  * Created: 2026-10-29
  * Scope: tour voice narration — toSpeech text clean-up, the narrator's premium/browser-voice
  *        fallback and mute (tour/voice.ts), the tour waiting for the spoken line before it
- *        auto-advances (useTour + useTourVoice), and the 🔊/🔇 control in TourOverlay.
+ *        auto-advances (useTour + useTourVoice), the 🔊/🔇 control in TourOverlay, and the Auto
+ *        voice client side (curated ElevenLabs keys, saved-choice migration, served-by note).
  */
 import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
 import React from 'react';
@@ -12,11 +13,13 @@ import { TOUR_STEPS, type TourStep } from '../tour/steps';
 import { useTour, type TourController } from '../tour/useTour';
 import { fixedLines, type TourVoice } from '../tour/useTourVoice';
 import { VoiceStatusCue } from '../components/VoiceToggle';
+import { VoicePicker } from '../components/VoicePicker';
 import {
   MUTE_STORAGE_KEY,
   PROVIDER_STORAGE_KEY,
   SILENT_NARRATOR,
   createNarrator,
+  optionKey,
   pickVoice,
   toSpeech,
   unspokenTail,
@@ -37,6 +40,7 @@ const providerState = (over: Partial<VoiceProviderState> = {}): VoiceProviderSta
   providers: PROVIDERS,
   setProvider: vi.fn(),
   select: vi.fn(),
+  servedBy: null,
   ...over,
 });
 
@@ -99,15 +103,15 @@ const errorResponse = (status: number) => ({
   blob: async () => new Blob(['{}']),
 });
 
-function narratorWith(fetchImpl: NarratorDeps['fetch'], extra: Partial<NarratorDeps> = {}) {
+function narratorWith(fetchImpl: NarratorDeps['fetch'], extra: Partial<NarratorDeps> = {}, getBody?: unknown) {
   const speech = fakeSpeech();
   const audio = fakeAudio();
   const storage = memoryStorage();
-  // Route GET /tts (voiceId init) to a silent no-op so the spy only sees POST calls.
+  // Route GET /tts (voice list) away from the spy, so it only sees POST calls; it answers `getBody` when given.
   const fetch: NarratorDeps['fetch'] = fetchImpl
     ? (url, init) =>
         (init as RequestInit & { method?: string }).method === 'GET'
-          ? Promise.resolve({ ok: false, headers: new Headers(), blob: async () => new Blob() })
+          ? Promise.resolve({ ok: getBody !== undefined, headers: new Headers(), blob: async () => new Blob(), json: async () => getBody })
           : fetchImpl(url, init)
     : null;
   const narrator = createNarrator({
@@ -463,6 +467,7 @@ function controllableNarrator() {
     voice: () => 'browser',
     status: SILENT_NARRATOR.status,
     limitedForMs: SILENT_NARRATOR.limitedForMs,
+    servedBy: SILENT_NARRATOR.servedBy,
     voiceId: () => null,
     provider: SILENT_NARRATOR.provider,
     providers: SILENT_NARRATOR.providers,
@@ -778,5 +783,119 @@ describe('narrator voice provider', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe('Auto voice and curated ElevenLabs voices', () => {
+  const CURATED = {
+    provider: 'elevenlabs-auto',
+    voiceId: 'lily-id',
+    providers: [
+      { id: 'elevenlabs-auto', label: 'Auto', voice: null, configured: true },
+      { id: 'elevenlabs', label: 'ElevenLabs · Lily (English)', voice: 'lily-id', configured: true },
+      { id: 'elevenlabs', label: 'ElevenLabs · Kyoko (Japanese)', voice: 'kyoko-id', configured: true },
+      { id: 'browser', label: 'Browser voice', voice: null, configured: true },
+    ],
+    credits: 'unknown',
+  };
+
+  it('gives each ElevenLabs voice its own picker key and sends that voice with each line', async () => {
+    /**
+     * Scenario: the presenter picks the Japanese ElevenLabs voice by hand.
+     * Slice: Auto voice — curated voices in the picker.
+     * Given two curated ElevenLabs voices and Auto, when their keys are built and the Japanese one is
+     * picked, then each voice has its own "elevenlabs|<voiceId>" key, Auto keeps a bare key, and the
+     * POST names provider "elevenlabs" with that voiceId.
+     */
+    // -- Given --
+    const fetch = vi.fn(async () => audioResponse());
+    const { narrator } = narratorWith(fetch as unknown as NarratorDeps['fetch'], {}, CURATED);
+    await flush();
+    // -- When --
+    const keys = narrator.providers().map(optionKey);
+    narrator.select('elevenlabs|kyoko-id');
+    void narrator.speak('休みは大切です。');
+    await flush();
+    // -- Then --
+    expect(keys).toEqual(['elevenlabs-auto', 'elevenlabs|lily-id', 'elevenlabs|kyoko-id', 'browser']);
+    const body = JSON.parse((fetch.mock.calls[0] as unknown as [string, RequestInit])[1].body as string);
+    expect(body).toEqual({ text: '休みは大切です。', provider: 'elevenlabs', voiceId: 'kyoko-id' });
+  });
+
+  it('maps a saved bare "elevenlabs" choice to the first curated voice, else to the server default', async () => {
+    /**
+     * Scenario: the presenter picked "ElevenLabs" before the curated voices existed.
+     * Slice: Auto voice — saved-choice migration.
+     * Given a stored bare "elevenlabs", when the server lists curated voices, then the picker shows the
+     * first one (Lily) and lines are sent with its voiceId; when the server lists none, the narrator
+     * follows the server default instead.
+     */
+    // -- Given --
+    const fetch = vi.fn(async () => audioResponse());
+    const saved = { [PROVIDER_STORAGE_KEY]: 'elevenlabs' };
+    const noCurated = { ...CURATED, providers: CURATED.providers.filter((p) => p.id !== 'elevenlabs') };
+    // -- When --
+    const { narrator } = narratorWith(fetch as unknown as NarratorDeps['fetch'], { storage: memoryStorage(saved) }, CURATED);
+    const { narrator: bare } = narratorWith(fetch as unknown as NarratorDeps['fetch'], { storage: memoryStorage(saved) }, noCurated);
+    await flush();
+    void narrator.speak('Rest matters.');
+    await flush();
+    // -- Then --
+    expect(narrator.selected()).toBe('elevenlabs|lily-id');
+    const body = JSON.parse((fetch.mock.calls[0] as unknown as [string, RequestInit])[1].body as string);
+    expect(body).toEqual({ text: 'Rest matters.', provider: 'elevenlabs', voiceId: 'lily-id' });
+    expect(bare.selected()).toBe('elevenlabs-auto');
+    expect(bare.provider()).toBe('elevenlabs-auto');
+  });
+
+  it('reports which engine spoke each line from the X-TTS-Provider header', async () => {
+    /**
+     * Scenario: on Auto, ElevenLabs credits ran low, so the server spoke the line with Gemini.
+     * Slice: Auto voice — served-by (narrator).
+     * Given /tts answers audio with "X-TTS-Provider: gemini", when a line is spoken, then servedBy is
+     * "gemini" and listeners are told; given /tts fails, then the browser voice speaks and servedBy is
+     * "browser".
+     */
+    // -- Given --
+    const gemini = { ...audioResponse(), headers: new Headers({ 'content-type': 'audio/mpeg', 'x-tts-provider': 'gemini' }) };
+    const a = narratorWith(vi.fn(async () => gemini) as unknown as NarratorDeps['fetch']);
+    const b = narratorWith(vi.fn(async () => errorResponse(502)) as unknown as NarratorDeps['fetch']);
+    const told = vi.fn();
+    a.narrator.subscribe(told);
+    // -- When --
+    const before = a.narrator.servedBy();
+    void a.narrator.speak('Rest matters.');
+    void b.narrator.speak('Rest matters.');
+    await flush();
+    // -- Then --
+    expect(before).toBeNull();
+    expect(a.narrator.servedBy()).toBe('gemini');
+    expect(told).toHaveBeenCalled();
+    expect(b.narrator.servedBy()).toBe('browser');
+  });
+
+  it('notes in the picker who spoke when on Auto or when another engine covered the choice', () => {
+    /**
+     * Scenario: the presenter wants to see every switch of engine during the tour.
+     * Slice: Auto voice — served-by note (picker).
+     * Given Auto chosen and Gemini speaking, when the top-bar picker renders, then it labels Auto
+     * "Auto (best available)", shows each ElevenLabs voice by name, and notes "Spoken by Gemini";
+     * given Lily chosen and ElevenLabs speaking, then no note shows.
+     */
+    // -- Given --
+    const providers = CURATED.providers as ProviderOption[];
+    const auto = providerState({ provider: 'elevenlabs-auto', selected: 'elevenlabs-auto', providers, servedBy: 'gemini' });
+    const lily = providerState({ provider: 'elevenlabs', selected: 'elevenlabs|lily-id', providers, servedBy: 'elevenlabs' });
+    // -- When --
+    const { rerender } = render(<VoicePicker state={auto} id="v" />);
+    const autoNote = screen.queryByText('Spoken by Gemini');
+    const autoOption = screen.queryByRole('option', { name: 'Auto (best available)' });
+    const lilyOption = screen.queryByRole('option', { name: 'ElevenLabs · Lily (English)' });
+    rerender(<VoicePicker state={lily} id="v" />);
+    // -- Then --
+    expect(autoNote).not.toBeNull();
+    expect(autoOption).not.toBeNull();
+    expect(lilyOption).not.toBeNull();
+    expect(screen.queryByText(/Spoken by/)).toBeNull();
   });
 });

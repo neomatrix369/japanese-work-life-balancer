@@ -3,6 +3,7 @@ import { optionKey, type VoiceProvider } from '../tour/voice';
 import { VoicePicker } from './VoicePicker';
 
 const SERVICE: Record<VoiceProvider, string> = {
+  'elevenlabs-auto': 'ElevenLabs',
   elevenlabs: 'ElevenLabs',
   gemini: 'Gemini',
   'gemini-argon': 'Gemini',

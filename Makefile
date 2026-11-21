@@ -32,7 +32,7 @@ help:
 	@printf '  mcp     start MCP server on :8765       (keep terminal open)\n'
 	@printf '  demo    data + model + ui + mcp; Ctrl-C stops all (refuses if already running)\n'
 	@printf '  stop    stop anything listening on :8083, :5173, :8765 (a leftover demo)\n'
-	@printf '  warm-voice  pre-record the fixed tour lines (UI running; PROVIDER=gemini)\n'
+	@printf '  warm-voice  pre-record the fixed tour lines (UI running; PROVIDER=gemini|gemini-argon|elevenlabs|elevenlabs-auto)\n'
 	@printf '  test    run model unit tests (model must NOT be running)\n'
 	@printf '  clean   remove build outputs and data-gen/out/\n'
 	@printf '\nToolchain overrides:\n'

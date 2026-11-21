@@ -886,6 +886,7 @@ td svg, th svg { vertical-align: -2px; }
   /* Voice gets its own row: its long names would otherwise widen a shared auto column and push
      Time limit / Role off-screen. */
   .topbar .voice-field { grid-column: 1 / -1; display: grid; grid-template-columns: auto minmax(0, 1fr); }
+  .topbar .voice-served-by { grid-column: 1 / -1; }
   .theme-toggle-btn { width: 32px; height: 28px; }
 
   .status-line { padding: var(--space-2) var(--space-4); }
