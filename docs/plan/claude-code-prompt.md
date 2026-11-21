@@ -315,6 +315,29 @@ Status line: solving spinner, live score (poll `/schedules/{id}` every 2 s while
 **Checkpoint 3:** `make model` + `make ui`, open `http://localhost:5173`, solve `burnout` with `cost-first`, keep it,
 solve with `health-first`, and the compare panel shows fewer at-risk employees and the extra cost. Report the numbers.
 
+### Tour narration voice (`ui/tts-plugin.ts`, `ui/src/tour/voice.ts`)
+
+**Status: DECIDED, not built yet.** This section is the build spec. The current code has none of it.
+
+Presentation only: the voice chosen never changes the schedule, scores or KPIs.
+
+- **Default:** `elevenlabs-auto` (Auto) when an ElevenLabs key is set. Without one: Gemini if allowed, else the browser voice.
+- **Pool:** `ELEVENLABS_VOICE_OPTIONS` in `ui/tts-plugin.ts`, entries `{ voiceId, label, lang: 'en' | 'ja', rank }`. At least 3 English and 2 Japanese voices, each ear-checked with `eleven_multilingual_v2`. Placeholders are marked `// MOCK:`. Find candidates with `GET /v2/voices?language=…&high_quality=true` (confirm the parameters in the ElevenLabs docs first). The API has no quality score, so `rank` lives in code.
+- **Language:** Japanese if the line has kana or kanji, otherwise English. An empty pool for a language skips ElevenLabs for that language.
+- **Credits:** `GET /v1/user/subscription` (`character_count`, `character_limit`). Success is cached 5 minutes, failure 60 seconds, both through the existing rate limiter. Below 10% left, or a line that would take the account below 10%, skips ElevenLabs. Unknown credits fail open (ElevenLabs is used). `GET /tts` returns the cached value and never waits on the network.
+- **Quota errors:** an ElevenLabs quota error marks ElevenLabs "credits exhausted" for a cooldown and routes to the fallback. It must not return a plain 502. **Step 0:** confirm the exact status and error code in the ElevenLabs docs before writing the handler.
+- **Fallback chain:** ElevenLabs → Gemini (only if `GEMINI_TIER=paid`, `GEMINI_BUDGET_LEFT_PCT` is unset or ≥ 10, and Gemini is not in a 429 cooldown) → browser voice. English lines use `Aoede`. Japanese lines use `GEMINI_JA_VOICES[0]` with no translation step, since the text is already Japanese.
+- **Shared steps:** extract `elevenSpeak` and `geminiSpeak` from the existing branches. The Auto branch composes them. No copied cache, gate or fetch code.
+- **Config per request:** `GEMINI_TIER` and `GEMINI_BUDGET_LEFT_PCT` are read on each request, so edits apply without a restart.
+- **Allow-list:** a client `voiceId` is accepted only if it is in the pool (or is the configured default). Anything else gets 400, so credits are never spent on an arbitrary voice.
+- **Cache order:** resolve the provider and voice first, then look up the cache with that voice's key.
+- **Served-by:** the response header `X-TTS-Provider` names the engine that spoke the line. The picker shows it.
+- **Migration:** a saved bare `elevenlabs` choice maps to the first curated voice.
+
+Tests: `ui/src/__tests__/ttsPlugin.test.ts` and `ui/src/__tests__/voice.test.tsx` (full list in the plan file's Tests section).
+
+**Checkpoint 3b (after the voice build):** `make ui`, then `make warm-voice PROVIDER=elevenlabs-auto` (a second run reports cache hits). Play one English and one Japanese line and confirm they use different voices. Lower the credit threshold temporarily to check the Gemini and browser fallbacks, and that the served-by note changes. `bash scripts/check-tts.sh` still passes with the real key.
+
 ---
 
 ## Phase 4 — MCP server (`mcp/`)
@@ -358,6 +381,7 @@ plain-text summary of the problem and constraints (from this spec).
 | `ui` | `cd ui && npm run dev` |
 | `mcp` | run the MCP server |
 | `demo` | `data`, then start model in background, wait until `curl -sf localhost:8083/demo-data` succeeds, then start ui and mcp; `trap` kills all on Ctrl-C (put the logic in `scripts/dev.sh`) |
+| `warm-voice` | `PROVIDER=gemini` (or `gemini-argon`, `gemini-ja`, `elevenlabs`; `elevenlabs-auto` once built); UI must be running. Pre-records the fixed tour lines into `ui/.tts-cache`, and re-runs report cache hits |
 | `test` | `cd model && mvn test` |
 | `clean` | remove build outputs and `data-gen/out/` |
 
@@ -388,7 +412,8 @@ and report the numbers you'd quote.
   "report only" behaviour.
 - Soft penalties use normalized units (minutes, ¥100) so equal weights are meaningful.
 - No persistence, no auth, fixed FX rates (all marked `MOCK:`).
+- Tour narration voice auto-pick is a presentation choice. Credits and quality choose the voice only; they never change the schedule or KPIs.
 
 ## Cut order if time runs short
 
-Longevity view → hours-rather-not-work (`Avoided hours`) → pinning → profit metrics.
+Longevity view → hours-rather-not-work (`Avoided hours`) → pinning → profit metrics → tour voice auto-pick (keep the fixed Lily voice from `ELEVENLABS_VOICE_ID`).

@@ -170,6 +170,7 @@ The health and profit metrics (see Success metrics) are reported only. They do n
 - A public holiday does not use up an employee's holiday days.
 - Unplanned absences are counted over the last 3 months, without any reason (no illness or medical details), in line with the rule that health details are not stored.
 - Longevity data (tenure, unplanned absences, retention) is reported only. It never changes the score or who gets assigned.
+- Tour narration voices (ElevenLabs, Gemini, browser) are a presentation feature. The voice chosen never changes the schedule, scores or KPIs.
 
 ## Build decisions
 
@@ -192,3 +193,6 @@ These settle the former open questions for this build. Any of them can be revisi
 | Task on a public holiday | Listed as unassigned, with the reason. |
 | Half-day holidays | Not supported. Full days only. |
 | Longevity view access | HR and executives. Managers see company-level numbers only. |
+| Tour narration voice | Auto by default: a curated English and Japanese ElevenLabs pool, ranked by ear. Fallbacks: Gemini (only if allowed), then the browser voice. Details in `claude-code-prompt.md`, Phase 3. |
+| Voice credits | ElevenLabs characters left from the account API. Below 10% skips ElevenLabs. Unknown credits do not block it. |
+| Gemini in narration | Never chosen automatically on the free tier, or with less than 10% of the budget left. Manual choices still work. |
