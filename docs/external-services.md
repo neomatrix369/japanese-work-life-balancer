@@ -9,7 +9,7 @@ outside this repo, what each one adds, and exactly how to set it up.
 | Service | Needed? | What it adds | Cost |
 |---|---|---|---|
 | [ElevenLabs](#elevenlabs-premium-tour-voice) | Optional | A natural narrator voice for the **▶ Play demo** tour | Free tier works for a demo; [paid plans](https://elevenlabs.io/pricing) for more characters or commercial use |
-| [Gemini](#gemini-tour-voices) | Optional | Six more tour voices, Gemini Argon wellbeing commentary, and two Japanese voices | Billed per use on the Gemini API ([pricing](https://ai.google.dev/pricing)); cached lines cost nothing. Planned: never picked automatically on the free tier (`GEMINI_TIER`, not built yet) |
+| [Gemini](#gemini-tour-voices) | Optional | Six more tour voices, Gemini Argon wellbeing commentary, and two Japanese voices | Billed per use on the Gemini API ([pricing](https://ai.google.dev/pricing)); cached lines cost nothing |
 | [Timefold Enterprise](#timefold-solver-community-or-enterprise) | Optional | Exact per-constraint match counts in **Broken constraints** (Community shows "–") | Free time-limited trial; licence needs a company email |
 
 ---
@@ -36,8 +36,7 @@ free-tier attribution and commercial-use terms on the [pricing page](https://ele
    |---|---|
    | **Text to Speech** | Required — the only endpoint the app calls |
    | **Voices: Read** | Recommended — lets you list voices with `curl` (below) |
-   | **User: Read** | Recommended once the planned credits check ships; not used yet |
-   | Models: Read | Optional |
+   | Models: Read, User: Read | Optional |
    | Everything else | Leave off |
 
 4. Optionally set a **credit limit** on the key so a runaway loop can't drain your quota
@@ -61,21 +60,6 @@ curl -s -H "xi-api-key: $ELEVENLABS_API_KEY" https://api.elevenlabs.io/v1/voices
 
 The default model is `eleven_multilingual_v2`, which pronounces Japanese names well. Other models are listed in
 the [models guide](https://elevenlabs.io/docs/models).
-
-### How the voice is chosen (Auto): planned
-
-> **Status: planned (DECIDED), not built yet.** Today the app speaks one ElevenLabs voice, set by `ELEVENLABS_VOICE_ID`
-> (Lily by default), and ElevenLabs is the default whenever its key is set. The steps below describe the target.
-
-**Auto** would be the default whenever an ElevenLabs key is set. For each line, the app would:
-
-1. Checks the language of the line. Text with kana or kanji uses a Japanese voice; anything else uses an English voice.
-2. Picks the highest-ranked voice in that language from the curated pool in `ui/tts-plugin.ts` (`ELEVENLABS_VOICE_OPTIONS`). The pool holds voices the team checked by ear. The API has no quality score, so the ranking is set in code.
-3. Checks the account's remaining credits (`GET /v1/user/subscription`, cached about 5 minutes). If less than 10% of the monthly characters are left, or the line would take the account below 10%, ElevenLabs is skipped.
-
-When ElevenLabs is skipped, the line goes to Gemini only if Gemini is allowed (see [Gemini](#gemini-tour-voices)). Otherwise it goes to your browser's voice. The picker shows which engine spoke each line. The **Voice** dropdown also lists each curated ElevenLabs voice on its own, so you can still choose one.
-
-Voice choices never change the schedule, the scores or the KPIs.
 
 ### 4. Tell the app
 
@@ -106,7 +90,7 @@ The voice and model are read **once when the UI server starts**, so restart `mak
 Then confirm what the server picked up:
 
 ```bash
-grep '\[tts\]' .logs/ui.log          # e.g. [tts] default=elevenlabs-auto geminiKey=present elevenLabsKey=present
+grep '\[tts\]' .logs/ui.log          # e.g. [tts] default=elevenlabs geminiKey=present elevenLabsKey=present
 curl -s localhost:5173/tts            # {"provider":"elevenlabs","voiceId":"…","providers":[…]}
 ```
 
@@ -132,19 +116,16 @@ answer is JSON with an error code, explained in the table below.
 | `[tts] upstream 401` with a permissions code | Key lacks **Text to Speech** | Edit the key's permissions on the [API keys page](https://elevenlabs.io/app/api/api-keys) |
 | `[tts] upstream 404 voice_not_found` | Voice ID typo, or a Library voice not added to **My Voices** | Add it to My Voices, re-copy the ID |
 | `[tts] upstream 400 model_not_found` | `ELEVENLABS_MODEL_ID` typo | Remove it to use the default, or pick one from the [models guide](https://elevenlabs.io/docs/models) |
-| `[tts] upstream 429` | Too many requests | Wait a few seconds; the tour retries by itself. Cached lines still play |
-| *Planned:* credits low or used up (Auto skips ElevenLabs) | Below 10% of the monthly characters, or an ElevenLabs quota error | The line goes to Gemini (if allowed) or the browser voice. Wait for the reset or [upgrade](https://elevenlabs.io/pricing) |
-| *Planned:* picker shows credits as "unknown" | Key lacks **User: Read**, or the credits check failed | Add the permission on the [API keys page](https://elevenlabs.io/app/api/api-keys). Until then ElevenLabs is still used |
+| `[tts] upstream 429` or a quota code | Monthly characters used up, or too many requests | Wait for the reset or [upgrade](https://elevenlabs.io/pricing); cached lines still play |
 
-The 401, 404 and 400 lines above are the real responses (checked against the live API). The permission rows follow
-ElevenLabs' documented behaviour but were not triggered here. The quota error code is pending verification against a
-live quota error.
+The 401, 404 and 400 lines above are the real responses (checked against the live API). The permission and quota
+rows follow ElevenLabs' documented behaviour but were not triggered here.
 
 ### Cost and caching
 
 Each spoken line is cached as an MP3 in `ui/.tts-cache/` (git-ignored), keyed by voice, model, voice settings and
 text. On a replay, the fixed lines come from the cache; lines that read live solver numbers ("Right now: 22 people
-at risk…") differ every run and are fetched again. Switching voices never replays old audio. Planned: Auto will pick the voice before the cache lookup, so a replay uses the cached audio for the voice it picks. Delete the folder to
+at risk…") differ every run and are fetched again. Switching voices never replays old audio. Delete the folder to
 free disk space or force fresh audio. The app also caps itself at 30 ElevenLabs calls per minute (cache hits don't count).
 
 **The key never reaches the browser.** The browser posts text to `POST /tts` on the Vite dev server, and only the
@@ -165,14 +146,8 @@ Adds these choices to the **Voice** dropdown (top bar, and next to 🔊 in the t
 - **Gemini Argon**: `gemini-4-argon` first rewrites the step as one or two spoken sentences about wellbeing and rest,
   then Gemini TTS reads that. If Argon fails, the original step text is spoken instead.
 
-**Today:** ElevenLabs is the default whenever its key is set. Without one, Gemini speaks only when picked, when it is the
-only key, or with `TTS_PROVIDER=gemini`.
-
-**Planned (not built yet):** Auto would make ElevenLabs the default when its key is set. Without an ElevenLabs key,
-Gemini would speak only if the free-tier guard allows it, otherwise the browser voice. Gemini would also be the fallback
-when ElevenLabs credits run low, if allowed. The guard: `GEMINI_TIER=paid`, `GEMINI_BUDGET_LEFT_PCT` unset or at least
-10%, and no rate-limit cooldown. Google's Gemini API has no credit-balance endpoint, so the budget figure would be kept
-in `ui/.env.local` by hand. Manual Gemini choices would still work.
+ElevenLabs stays the default whenever its key is set; Gemini only speaks when picked (or when it is the only key, or
+`TTS_PROVIDER=gemini`).
 
 ### 1. Create a key
 
@@ -191,8 +166,6 @@ Then set the key in `ui/.env.local` (or `export GEMINI_API_KEY=…` in your shel
 GEMINI_API_KEY=your_gemini_key_here
 # Optional — defaults shown
 # GEMINI_VOICE_NAME=Aoede
-# GEMINI_TIER=free           # planned, not read by the app yet: set to paid on a paid plan
-# GEMINI_BUDGET_LEFT_PCT=    # planned, not read yet: your Gemini budget left (%), updated by hand
 # TTS_PROVIDER=gemini        # make Gemini the default even when an ElevenLabs key is set
 ```
 
@@ -225,7 +198,6 @@ the voice you'll demo, so the remaining lines are cached too.
 | `[tts] gemini upstream 400` / `403` | Key invalid or revoked, or the Generative Language API is restricted for that key | Create a fresh key in AI Studio; check the key's API restrictions in Google Cloud |
 | `[tts] gemini upstream 404` | A `GEMINI_*_MODEL` override names a model that doesn't exist | Remove the override to use the default |
 | Tour uses the browser voice with no note | Gemini slow (over 10 s, 25 s for Argon) or unreachable | Rehearse first so lines come from the cache |
-| *Planned:* Gemini never used when ElevenLabs runs out, or with no ElevenLabs key | Free tier (`GEMINI_TIER` unset or `free`), by design | On a paid plan, set `GEMINI_TIER=paid` in `ui/.env.local` and restart. Add `GEMINI_BUDGET_LEFT_PCT` if you track the budget |
 
 The 429 row is behaviour we saw live; the 400/403/404 rows follow Google's documented errors and were not triggered here.
 
