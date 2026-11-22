@@ -317,13 +317,13 @@ solve with `health-first`, and the compare panel shows fewer at-risk employees a
 
 ### Tour narration voice (`ui/tts-plugin.ts`, `ui/src/tour/voice.ts`)
 
-**Status: DECIDED, not built yet.** This section is the build spec. The current code has none of it.
+**Status: BUILT 2026-11-21.** 4 pool voices (George, Brian, Alice, Charlotte) are still `// MOCK:` — pending an ear-check with `eleven_multilingual_v2`.
 
 Presentation only: the voice chosen never changes the schedule, scores or KPIs.
 
 **Why:** the narrator always speaks one fixed ElevenLabs voice (Lily, from `ELEVENLABS_VOICE_ID`) and can run out of credits mid-tour. The team wants a curated set of quality English and Japanese voices, a credit-aware fallback, and an Auto choice that makes both decisions per line. Manual choices keep working.
 
-**Decisions taken:** curated quality list (no API quality score exists); ElevenLabs while credits are at least 10%, then Gemini if allowed, then the browser voice; Auto is the default; with no ElevenLabs key, Gemini if allowed, else the browser voice. Lily stays the English default voice.
+**Decisions taken:** curated quality list (no API quality score exists); ElevenLabs while credits are at least 10%, then Gemini if allowed, then the browser voice; Auto is the default; with no ElevenLabs key, Gemini if allowed, else the browser voice. Lily stays the English default voice, unless `ELEVENLABS_VOICE_ID` names a voice outside the curated list: that voice is the user's own, leads the English lines in Auto and is listed first in the picker as "Your voice" (decided 2026-11-22).
 
 **Reuse first (no parallel paths):** `GEMINI_VOICE_OPTIONS`, `GEMINI_JA_VOICES`, `optionKey`, `resolveGeminiVoice`, `ttsCacheKey`, `coolingUntil`, the per-minute rate limiter and `diskCache` in `ui/tts-plugin.ts` and `ui/src/tour/voice.ts`. Keep the new logic in small pure functions with `fetch` and `now` injected, so tests run offline.
 
@@ -337,10 +337,17 @@ Presentation only: the voice chosen never changes the schedule, scores or KPIs.
 - Docs listed under "Docs to update when this ships" below.
 
 - **Default:** `elevenlabs-auto` (Auto) when an ElevenLabs key is set. Without one: Gemini if allowed, else the browser voice.
-- **Pool:** `ELEVENLABS_VOICE_OPTIONS` in `ui/tts-plugin.ts`, entries `{ voiceId, label, lang: 'en' | 'ja', rank }`. At least 3 English and 2 Japanese voices, each ear-checked with `eleven_multilingual_v2`. Placeholders are marked `// MOCK:`. Find candidates with `GET /v2/voices?language=…&high_quality=true` (confirm the parameters in the ElevenLabs docs first). The API has no quality score, so `rank` lives in code.
+- **Pool:** `ELEVENLABS_VOICE_OPTIONS` in `ui/tts-plugin.ts`, entries `{ voiceId, label, lang: 'en' | 'ja', rank }`. At least 3 English and 2 Japanese voices, each ear-checked with `eleven_multilingual_v2`. Placeholders are marked `// MOCK:`. Pick from the premade voices: `GET /v2/voices?voice_type=default&language=…&high_quality=true` (confirmed in Step 0). Premade voices need no add step and work on the free tier. Avoid Voice Library voices (`GET /v1/shared-voices`): the free tier cannot use them through the API, some are paid-only, and some cost 2× credits per character. The API has no quality score, so `rank` lives in code.
 - **Language:** Japanese if the line has kana or kanji, otherwise English. An empty pool for a language skips ElevenLabs for that language.
 - **Credits:** `GET /v1/user/subscription` (`character_count`, `character_limit`). Success is cached 5 minutes, failure 60 seconds, both through the existing rate limiter. Below 10% left, or a line that would take the account below 10%, skips ElevenLabs. Unknown credits fail open (ElevenLabs is used). `GET /tts` returns the cached value and never waits on the network.
-- **Quota errors:** an ElevenLabs quota error marks ElevenLabs "credits exhausted" for a cooldown and routes to the fallback. It must not return a plain 502. **Step 0:** confirm the exact status and error code in the ElevenLabs docs before writing the handler.
+- **Quota errors:** an ElevenLabs quota error marks ElevenLabs "credits exhausted" for a cooldown and routes to the fallback. It must not return a plain 502. The cooldown lasts 5 minutes, the same as the credits cache.
+- **Step 0 findings (confirmed 2026-11-21 in the ElevenLabs docs):**
+  - Error bodies come in two shapes. New: `{detail:{type, code, message, status, request_id}}`, where `status` is marked legacy. Old: `{detail:{status, message}}`. `upstreamError` reads `detail.code` first, then `detail.status`.
+  - "Out of credits" is code `insufficient_credits` (type `payment_required`, HTTP 402) on the errors page, and `quota_exceeded` in the older help pages, listed under 400/401. The HTTP status is not settled, so detection keys on the **code**: any 400, 401 or 402 whose code is `quota_exceeded` or `insufficient_credits`. A 401 with `invalid_api_key` stays a 502, as today.
+  - 429 codes (`rate_limit_exceeded`, `concurrent_limit_exceeded`, `system_busy`, older `too_many_concurrent_requests`) keep the existing 429 cooldown. They do not mark credits exhausted.
+  - `GET /v1/user/subscription` returns `character_count`, `character_limit` and `next_character_count_reset_unix`. It needs the `user_read` key permission; the error for a key without it is not documented. So any non-OK reply means "unknown" (fail open, cached 60 seconds).
+  - TTS replies carry a `character-cost` header. Not used yet: a possible follow-up to cut the credits lag.
+  - Sources: `elevenlabs.io/docs/eleven-api/resources/errors`, `…/api-reference/user/subscription/get`, `…/api-reference/voices/search`, `…/api-reference/introduction`.
 - **Fallback chain:** ElevenLabs → Gemini (only if `GEMINI_TIER=paid`, `GEMINI_BUDGET_LEFT_PCT` is unset or ≥ 10, and Gemini is not in a 429 cooldown) → browser voice. English lines use `Aoede`. Japanese lines use `GEMINI_JA_VOICES[0]` with no translation step, since the text is already Japanese.
 - **Shared steps:** extract `elevenSpeak` and `geminiSpeak` from the existing branches. The Auto branch composes them. No copied cache, gate or fetch code.
 - **Config per request:** `GEMINI_TIER` and `GEMINI_BUDGET_LEFT_PCT` are read on each request, so edits apply without a restart.
@@ -374,7 +381,7 @@ Presentation only: the voice chosen never changes the schedule, scores or KPIs.
 
 **Open risks**
 - Quality is a human judgement. The curated list is only as good as the ear test.
-- The quota error code is unverified until Step 0 confirms it in the ElevenLabs docs.
+- The quota error codes are documented, but which HTTP status comes back with `quota_exceeded` is not. Detection keys on the code to cover all three statuses. A live out-of-credits reply has not been seen yet.
 - Credits can lag. The 10% rule and the line-length check give a buffer, but the account can still run out between checks.
 - With `GEMINI_TIER` unset and no ElevenLabs key, the narrator uses the browser voice. The browser's Japanese quality is not guaranteed.
 - `GEMINI_BUDGET_LEFT_PCT` goes stale unless someone updates it. With the tier set to paid and no budget value, only the 429 cooldown limits spend.

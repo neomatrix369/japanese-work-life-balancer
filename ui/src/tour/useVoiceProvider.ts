@@ -4,7 +4,7 @@
  * shows the same value.
  */
 import { useCallback, useSyncExternalStore } from 'react';
-import type { Narrator, ProviderOption, VoiceProvider } from './voice';
+import type { Narrator, ProviderOption, ServedBy, VoiceProvider } from './voice';
 
 export interface VoiceProviderState {
   provider: VoiceProvider;
@@ -13,6 +13,8 @@ export interface VoiceProviderState {
   providers: ProviderOption[];
   setProvider: (p: VoiceProvider) => void;
   select: (key: string) => void;
+  /** the engine that spoke the latest line (null before the first line) */
+  servedBy: ServedBy | null;
 }
 
 export function useVoiceProvider(narrator: Narrator): VoiceProviderState {
@@ -20,7 +22,8 @@ export function useVoiceProvider(narrator: Narrator): VoiceProviderState {
   const provider = useSyncExternalStore(subscribe, narrator.provider);
   const selected = useSyncExternalStore(subscribe, narrator.selected);
   const providers = useSyncExternalStore(subscribe, narrator.providers);
+  const servedBy = useSyncExternalStore(subscribe, narrator.servedBy);
   const setProvider = useCallback((p: VoiceProvider) => narrator.setProvider(p), [narrator]);
   const select = useCallback((key: string) => narrator.select(key), [narrator]);
-  return { provider, selected, providers, setProvider, select };
+  return { provider, selected, providers, setProvider, select, servedBy };
 }

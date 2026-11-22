@@ -2,7 +2,7 @@
  * Voice narration for the guided tour.
  *
  * The narrator first asks the dev server's `POST /tts` for audio from the chosen provider
- * (ElevenLabs "Lily", Gemini, or Gemini Argon — keys kept server-side). When that fails, is
+ * (Auto, a curated ElevenLabs voice, Gemini, or Gemini Argon — keys kept server-side). When that fails, is
  * missing, or is slow, it falls back to the browser's own speechSynthesis (an en-GB voice
  * when there is one), so the tour always keeps talking. Once the key works again, the
  * premium voice comes back by itself.
@@ -14,7 +14,11 @@ export type VoiceKind = 'premium' | 'browser' | 'none';
 export type VoiceStatus = 'idle' | 'preparing' | 'speaking';
 
 /** Same ids as the server's `VoiceProvider` in tts-plugin.ts. */
-export type VoiceProvider = 'elevenlabs' | 'gemini' | 'gemini-argon' | 'gemini-ja' | 'browser';
+export type VoiceProvider = 'elevenlabs-auto' | 'elevenlabs' | 'gemini' | 'gemini-argon' | 'gemini-ja' | 'browser';
+
+/** The engine that actually spoke a line (`X-TTS-Provider` header, or the browser's own voice). */
+export type ServedBy = 'elevenlabs' | 'gemini' | 'browser';
+const SERVED_BY: readonly ServedBy[] = ['elevenlabs', 'gemini', 'browser'];
 
 export interface ProviderOption {
   id: VoiceProvider;
@@ -24,16 +28,16 @@ export interface ProviderOption {
   configured: boolean;
 }
 
-const PROVIDER_IDS: readonly VoiceProvider[] = ['elevenlabs', 'gemini', 'gemini-argon', 'gemini-ja', 'browser'];
+const PROVIDER_IDS: readonly VoiceProvider[] = ['elevenlabs-auto', 'elevenlabs', 'gemini', 'gemini-argon', 'gemini-ja', 'browser'];
 /** providers with several voices in the picker: the voice is part of the option key */
-const MULTI_VOICE: readonly VoiceProvider[] = ['gemini', 'gemini-ja'];
+const MULTI_VOICE: readonly VoiceProvider[] = ['elevenlabs', 'gemini', 'gemini-ja'];
 
 export function isVoiceProvider(value: unknown): value is VoiceProvider {
   return typeof value === 'string' && (PROVIDER_IDS as readonly string[]).includes(value);
 }
 
 /**
- * Picker value for an option: "<provider>|<voice>" for Gemini and Japanese voices (several share a provider),
+ * Picker value for an option: "<provider>|<voice>" for ElevenLabs, Gemini and Japanese voices (several share a provider),
  * otherwise just the provider id.
  */
 export function optionKey(p: Pick<ProviderOption, 'id' | 'voice'>): string {
@@ -47,6 +51,7 @@ function providerOf(key: string): VoiceProvider | null {
 
 /** Shown before GET /tts answers (or when it never does). */
 export const FALLBACK_PROVIDERS: ProviderOption[] = [
+  { id: 'elevenlabs-auto', label: 'Auto', voice: null, configured: false },
   { id: 'elevenlabs', label: 'ElevenLabs', voice: null, configured: false },
   { id: 'browser', label: 'Browser voice', voice: null, configured: true },
 ];
@@ -69,6 +74,8 @@ export interface Narrator {
   status(): VoiceStatus;
   /** ms left before the premium voice is tried again after a 429 (0 when not rate limited) */
   limitedForMs(): number;
+  /** the engine that spoke the latest line (null before the first line) */
+  servedBy(): ServedBy | null;
   /** voice ID/name of the active provider on the server (null until fetched or when unavailable) */
   voiceId(): string | null;
   /** the provider in use: the user's choice, else the server's default */
@@ -98,6 +105,7 @@ export const SILENT_NARRATOR: Narrator = {
   voice: () => 'none',
   status: () => 'idle',
   limitedForMs: () => 0,
+  servedBy: () => null,
   voiceId: () => null,
   provider: () => 'browser',
   providers: () => FALLBACK_PROVIDERS,
@@ -180,9 +188,15 @@ export const PROVIDER_STORAGE_KEY = 'tourVoiceProvider';
 export const TTS_TIMEOUT_MS = 4000;
 /**
  * Gemini needs ~4 s for a first-time line and Argon ~17 s (it writes the line, then speaks / Japanese ~7 s (translate, then speak)
- * it), so they get longer waits. Audio is cached on disk, so a rehearsal run makes replays instant.
+ * it), so they get longer waits. Auto may hand the line to Gemini when ElevenLabs credits are low, so it waits like
+ * Japanese. Audio is cached on disk, so a rehearsal run makes replays instant.
  */
-export const PROVIDER_TIMEOUT_MS: Partial<Record<VoiceProvider, number>> = { gemini: 10_000, 'gemini-ja': 12_000, 'gemini-argon': 25_000 };
+export const PROVIDER_TIMEOUT_MS: Partial<Record<VoiceProvider, number>> = {
+  'elevenlabs-auto': 12_000,
+  gemini: 10_000,
+  'gemini-ja': 12_000,
+  'gemini-argon': 25_000,
+};
 const MAX_SERVER_CHARS = 600; // same limit as the /tts route
 /** a 0-sample WAV: playing it inside a click "unlocks" audio for later */
 const SILENT_WAV = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
@@ -211,6 +225,18 @@ type FetchLike = (
 
 /** Shortest browser-voice spell after a 429, so a tiny server wait does not cause a retry storm. */
 const MIN_RATE_LIMIT_BACKOFF_MS = 1000;
+
+/** Server audio for one line, and the engine that spoke it. */
+interface Clip {
+  url: string;
+  by: ServedBy | null;
+}
+
+/** The `X-TTS-Provider` header as a known engine, or null when absent or unknown. */
+function servedByHeader(res: Awaited<ReturnType<FetchLike>>): ServedBy | null {
+  const value = res.headers.get('x-tts-provider');
+  return (SERVED_BY as readonly (string | null)[]).includes(value) ? (value as ServedBy) : null;
+}
 
 /** The server's `retryAfterMs` from a 429 body, or null when it is not a 429 or says nothing. */
 async function retryAfterMs(res: Awaited<ReturnType<FetchLike>>): Promise<number | null> {
@@ -291,7 +317,7 @@ export function createNarrator(overrides: Partial<NarratorDeps> = {}): Narrator 
     return o ? optionKey(o) : (chosen ?? serverDefault);
   };
   /** voice to send for a multi-voice provider, read from the key itself so it works before GET /tts answers */
-  const chosenGeminiVoice = (): string | undefined => {
+  const chosenVoice = (): string | undefined => {
     const [, voice] = (chosen ?? '').split('|');
     return voice || undefined;
   };
@@ -305,7 +331,8 @@ export function createNarrator(overrides: Partial<NarratorDeps> = {}): Narrator 
   let limitedUntil = 0;
   let status: VoiceStatus = 'idle';
   let activeVoiceId: string | null = null;
-  const urls = new Map<string, Promise<string | null>>();
+  let servedBy: ServedBy | null = null;
+  const urls = new Map<string, Promise<Clip | null>>();
   /** cache keys whose audio URL has arrived (a hit plays at once: no "preparing") */
   const ready = new Set<string>();
   const listeners = new Set<() => void>();
@@ -330,6 +357,11 @@ export function createNarrator(overrides: Partial<NarratorDeps> = {}): Narrator 
           const list = b.providers.filter((p): p is ProviderOption => isVoiceProvider((p as ProviderOption)?.id));
           if (list.length > 0) providerList = list;
         }
+        // A bare "elevenlabs" saved before the curated voices existed: its first listed voice, else the server default.
+        if (chosen === 'elevenlabs') {
+          const first = chosenOption();
+          chosen = first ? optionKey(first) : null;
+        }
         // Server is reachable and config may have changed (e.g. new API key in .env.local) —
         // clear any stale backoff so the next POST actually tries.
         clearBackoff();
@@ -348,6 +380,11 @@ export function createNarrator(overrides: Partial<NarratorDeps> = {}): Narrator 
     status = s;
     listeners.forEach((fn) => fn());
   };
+  const setServedBy = (by: ServedBy | null) => {
+    if (by === servedBy) return;
+    servedBy = by;
+    listeners.forEach((fn) => fn());
+  };
   const getAudio = () => (audio ??= d.createAudio?.() ?? null);
   const urlKey = (line: string) => `${selectedKey()}\n${line}`;
   const canAskServer = (line: string) =>
@@ -355,7 +392,7 @@ export function createNarrator(overrides: Partial<NarratorDeps> = {}): Narrator 
   /** true when speaking this line means waiting on the server (not cached, not skipped) */
   const mustWait = (line: string) => !ready.has(urlKey(line)) && (urls.has(urlKey(line)) || canAskServer(line));
 
-  function audioUrl(line: string): Promise<string | null> {
+  function audioUrl(line: string): Promise<Clip | null> {
     const provider = currentProvider();
     if (provider === 'browser') return Promise.resolve(null);
     const cacheKey = urlKey(line);
@@ -370,11 +407,11 @@ export function createNarrator(overrides: Partial<NarratorDeps> = {}): Narrator 
           headers: { 'Content-Type': 'application/json' },
           // no provider until the user picks one: the server's default (as before)
           body: JSON.stringify(
-            chosen ? { text: line, provider, ...(chosenGeminiVoice() ? { voiceId: chosenGeminiVoice() } : {}) } : { text: line },
+            chosen ? { text: line, provider, ...(chosenVoice() ? { voiceId: chosenVoice() } : {}) } : { text: line },
           ),
         });
         if (res.ok && (res.headers.get('content-type') ?? '').includes('audio')) {
-          return d.createObjectURL(await res.blob());
+          return { url: d.createObjectURL(await res.blob()), by: servedByHeader(res) };
         }
         // Rate limited: wait only as long as the server says, then the premium voice comes
         // back by itself (no page refresh needed).
@@ -448,6 +485,7 @@ export function createNarrator(overrides: Partial<NarratorDeps> = {}): Narrator 
       return Promise.resolve();
     }
     setKind('browser');
+    setServedBy('browser');
     return new Promise((done) => {
       const u = d.makeUtterance!(line);
       u.lang = 'en-GB';
@@ -476,12 +514,13 @@ export function createNarrator(overrides: Partial<NarratorDeps> = {}): Narrator 
       if (muted || !line) return;
       const mine = token;
       if (mustWait(line)) setStatus('preparing');
-      const url = await withTimeout(audioUrl(line), d.providerTimeoutMs[currentProvider()] ?? d.timeoutMs);
+      const clip = await withTimeout(audioUrl(line), d.providerTimeoutMs[currentProvider()] ?? d.timeoutMs);
       if (mine !== token) return;
       setStatus('speaking');
-      if (url) {
+      if (clip) {
         setKind('premium');
-        const played = await playUrl(url, line);
+        setServedBy(clip.by);
+        const played = await playUrl(clip.url, line);
         if (mine !== token) return;
         if (played) {
           setStatus('idle');
@@ -536,6 +575,7 @@ export function createNarrator(overrides: Partial<NarratorDeps> = {}): Narrator 
     voice: () => kind,
     status: () => status,
     limitedForMs: () => Math.max(0, limitedUntil - d.now()),
+    servedBy: () => servedBy,
     voiceId: () => (chosen ? (chosenOption()?.voice ?? null) : activeVoiceId),
     provider: currentProvider,
     providers: () => providerList,

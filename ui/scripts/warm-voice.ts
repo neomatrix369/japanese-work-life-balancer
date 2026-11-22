@@ -2,7 +2,7 @@
 // (ui/.tts-cache), so the tour opens with no Gemini/ElevenLabs wait and spends no quota on them.
 // Lines with live solver numbers change every run, so they are not warmed.
 //
-// Usage (UI must be running):  make warm-voice [PROVIDER=gemini|gemini-argon|elevenlabs]
+// Usage (UI must be running):  make warm-voice [PROVIDER=gemini|gemini-argon|elevenlabs|elevenlabs-auto]
 //   or from ui/:               npx vite-node scripts/warm-voice.ts -- gemini
 // Requests go one at a time; a 429 waits the server's retryAfterMs and tries again.
 import { TOUR_STEPS } from '../src/tour/steps';
@@ -37,7 +37,7 @@ async function warm(text: string, provider: string): Promise<string> {
 async function main(): Promise<void> {
   const provider = process.argv.slice(2).find((a) => a !== '--') ?? 'gemini';
   if (!isVoiceProvider(provider) || provider === 'browser') {
-    console.error(`Unknown provider "${provider}". Use gemini, gemini-argon or elevenlabs.`);
+    console.error(`Unknown provider "${provider}". Use gemini, gemini-argon, elevenlabs or elevenlabs-auto.`);
     process.exit(2);
   }
   const lines = fixedLines(TOUR_STEPS, costRun.final.schedule.employees.length);

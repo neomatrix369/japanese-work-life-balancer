@@ -22,10 +22,11 @@ Services at a glance: UI on :5173, model REST API on :8083, MCP server on :8765.
       No key is fine; the tour falls back to the browser voice. To add keys: `cp ui/.env.example ui/.env.local`
       ([ElevenLabs](docs/external-services.md#elevenlabs-premium-tour-voice) ·
       [Gemini](docs/external-services.md#gemini-tour-voices) setup).
-- [ ] `make warm-voice PROVIDER=<the voice you will demo>` pre-records the 6 fixed lines (paced to stay under the
-      Gemini per-minute limit), so the tour opens instantly. If Gemini is rate limited mid-tour, the browser voice
-      covers for the few seconds Gemini asks for and the chosen voice then comes back by itself, with no refresh needed. Lines that read live numbers ("Right now: 22 people at risk…") change with
-      every solve, so they still go to the chosen voice provider.
+- [ ] `make warm-voice PROVIDER=elevenlabs-auto` (or `PROVIDER=gemini`, `gemini-argon`, `elevenlabs`, etc.) pre-records
+      the 6 fixed lines, so the tour opens instantly. A second run reports cache hits. Lines that read live numbers
+      ("Right now: 22 people at risk…") change each solve, so they still call the voice provider live.
+      With `PROVIDER=elevenlabs-auto` the server picks the best available voice per line and falls back through
+      Gemini (if `GEMINI_TIER=paid`) to the browser voice automatically.
 - [ ] Sound on, the correct output device chosen, and the browser tab not muted.
 
 ---
