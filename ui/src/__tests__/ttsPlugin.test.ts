@@ -24,6 +24,7 @@ import {
   sendTtsResult,
   ttsCacheKey,
   ttsStatus,
+  voicePool,
   type Credits,
   type ElevenVoiceOption,
   type FetchLike,
@@ -440,6 +441,45 @@ describe('Auto narration voice', () => {
     const voice = pickElevenVoice(text, pool, credits, text.length);
     // -- Then --
     expect(voice?.voiceId ?? null).toBe(expected);
+  });
+
+  const OWN = 'ownVoice0123456789ab';
+  it.each<[string, string | undefined, string, string]>([
+    ['with no configured voice, English stays with Lily', undefined, EN_LINE, LILY],
+    ['with Lily configured, English stays with Lily', LILY, EN_LINE, LILY],
+    ['with their own voice configured, English uses it', OWN, EN_LINE, OWN],
+    ['with their own voice configured, Japanese still uses the Japanese voice', OWN, JA_LINE, ALICE],
+  ])('voicePool: %s', (_name, configured, text, expected) => {
+    /**
+     * Scenario: the user set ELEVENLABS_VOICE_ID to a voice of their own.
+     * Slice: Auto narration voice — configured voice first.
+     * Given the configured voice, when Auto picks a voice for a line, then the user's own voice leads
+     * the English lines, and Lily leads when nothing (or a curated voice) is configured.
+     */
+    // -- Given --
+    const pool = voicePool(configured);
+    // -- When --
+    const voice = pickElevenVoice(text, pool, FULL);
+    // -- Then --
+    expect(voice?.voiceId).toBe(expected);
+  });
+
+  it('lists the configured voice in the picker as "Your voice", once', () => {
+    /**
+     * Scenario: the picker shows the user's own voice.
+     * Slice: Auto narration voice — configured voice first.
+     * Given an ElevenLabs key and the user's own voice, when GET /tts is built, then one entry names it
+     * "Your voice" and the curated voices follow; with Lily configured, Lily is not listed twice.
+     */
+    // -- Given --
+    const base = { requestedProvider: undefined, geminiKey: undefined, elevenKey: KEY, geminiVoice: 'Aoede', geminiOk: false, credits: 'unknown' as const };
+    // -- When --
+    const own = ttsStatus({ ...base, elevenVoiceId: OWN }).providers.filter((p) => p.id === 'elevenlabs');
+    const lily = ttsStatus({ ...base, elevenVoiceId: LILY }).providers.filter((p) => p.id === 'elevenlabs');
+    // -- Then --
+    expect(own[0]).toMatchObject({ label: 'ElevenLabs · Your voice (English)', voice: OWN });
+    expect(own).toHaveLength(ELEVENLABS_VOICE_OPTIONS.length + 1);
+    expect(lily).toHaveLength(ELEVENLABS_VOICE_OPTIONS.length);
   });
 
   it.each<[string, () => Promise<UpstreamResponse>, Credits, number]>([

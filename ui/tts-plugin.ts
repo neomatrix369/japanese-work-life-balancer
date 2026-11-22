@@ -44,6 +44,18 @@ export const ELEVENLABS_VOICE_OPTIONS: readonly ElevenVoiceOption[] = [
   { voiceId: 'XB0fDUnXU5powFXDhCwa', label: 'Charlotte', lang: 'ja', rank: 2 }, // MOCK: not ear-checked yet
 ];
 
+/**
+ * The pool Auto, the allow-list and the picker all use. A configured ELEVENLABS_VOICE_ID that is not
+ * curated is the user's own voice: it leads the English lines as "Your voice".
+ */
+export function voicePool(
+  configuredVoiceId: string = DEFAULT_VOICE_ID,
+  base: readonly ElevenVoiceOption[] = ELEVENLABS_VOICE_OPTIONS,
+): readonly ElevenVoiceOption[] {
+  if (base.some((v) => v.voiceId === configuredVoiceId)) return base;
+  return [{ voiceId: configuredVoiceId, label: 'Your voice', lang: 'en', rank: 0 }, ...base];
+}
+
 // Gemini defaults
 export const DEFAULT_GEMINI_VOICE = 'Aoede'; // breezy, natural long-form voice
 export const DEFAULT_GEMINI_TTS_MODEL = 'gemini-3.8-flash-tts';
@@ -476,6 +488,7 @@ export function createTtsHandler(
     voiceId: config.elevenlabs?.voiceId ?? config.voiceId ?? DEFAULT_VOICE_ID,
     modelId: config.elevenlabs?.modelId ?? config.modelId ?? DEFAULT_MODEL_ID,
   };
+  const pool = voicePool(eleven.voiceId);
 
   const gemini: GeminiConfig = {
     apiKey: config.gemini?.apiKey,
@@ -615,7 +628,7 @@ export function createTtsHandler(
    */
   const autoSpeak = async (text: string): Promise<TtsResult> => {
     if (elevenOk()) {
-      const voice = pickElevenVoice(text, ELEVENLABS_VOICE_OPTIONS, await credits.get(), text.length);
+      const voice = pickElevenVoice(text, pool, await credits.get(), text.length);
       if (voice) {
         const r = await elevenSpeak(text, voice.voiceId);
         if (r.status === 200) return r;
@@ -640,10 +653,9 @@ export function createTtsHandler(
     if (provider === 'elevenlabs-auto') return autoSpeak(text);
 
     if (provider === 'elevenlabs') {
-      const configured = eleven.voiceId ?? DEFAULT_VOICE_ID;
-      const voiceId = parsedReq.voiceId ?? configured;
-      // Only curated (or the configured) voices, so credits are never spent on an arbitrary voice.
-      if (voiceId !== configured && !ELEVENLABS_VOICE_OPTIONS.some((v) => v.voiceId === voiceId)) {
+      const voiceId = parsedReq.voiceId ?? eleven.voiceId ?? DEFAULT_VOICE_ID;
+      // Only pool voices (curated, plus the configured one), so credits are never spent on an arbitrary voice.
+      if (!pool.some((v) => v.voiceId === voiceId)) {
         return json(400, { error: 'voice_not_allowed' });
       }
       return elevenSpeak(text, voiceId);
@@ -753,8 +765,8 @@ export function ttsStatus(input: TtsStatusInput): TtsStatus {
   const defaultGemini = resolveGeminiVoice(input.geminiVoice);
   const providers: ProviderEntry[] = [
     { id: 'elevenlabs-auto', label: 'Auto', voice: null, configured: !!elevenKey },
-    // one entry per curated ElevenLabs voice; `voice` is what the client sends back as voiceId
-    ...ELEVENLABS_VOICE_OPTIONS.map((v): ProviderEntry => ({
+    // one entry per pool voice (the user's own first, if set); `voice` is what the client sends back as voiceId
+    ...voicePool(elevenVoiceId).map((v): ProviderEntry => ({
       id: 'elevenlabs',
       label: `ElevenLabs · ${v.label} (${v.lang === 'ja' ? '日本語' : 'English'})`,
       voice: v.voiceId,

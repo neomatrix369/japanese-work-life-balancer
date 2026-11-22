@@ -323,7 +323,7 @@ Presentation only: the voice chosen never changes the schedule, scores or KPIs.
 
 **Why:** the narrator always speaks one fixed ElevenLabs voice (Lily, from `ELEVENLABS_VOICE_ID`) and can run out of credits mid-tour. The team wants a curated set of quality English and Japanese voices, a credit-aware fallback, and an Auto choice that makes both decisions per line. Manual choices keep working.
 
-**Decisions taken:** curated quality list (no API quality score exists); ElevenLabs while credits are at least 10%, then Gemini if allowed, then the browser voice; Auto is the default; with no ElevenLabs key, Gemini if allowed, else the browser voice. Lily stays the English default voice.
+**Decisions taken:** curated quality list (no API quality score exists); ElevenLabs while credits are at least 10%, then Gemini if allowed, then the browser voice; Auto is the default; with no ElevenLabs key, Gemini if allowed, else the browser voice. Lily stays the English default voice, unless `ELEVENLABS_VOICE_ID` names a voice outside the curated list: that voice is the user's own, leads the English lines in Auto and is listed first in the picker as "Your voice" (decided 2026-11-22).
 
 **Reuse first (no parallel paths):** `GEMINI_VOICE_OPTIONS`, `GEMINI_JA_VOICES`, `optionKey`, `resolveGeminiVoice`, `ttsCacheKey`, `coolingUntil`, the per-minute rate limiter and `diskCache` in `ui/tts-plugin.ts` and `ui/src/tour/voice.ts`. Keep the new logic in small pure functions with `fetch` and `now` injected, so tests run offline.
 

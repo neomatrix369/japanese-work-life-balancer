@@ -283,8 +283,8 @@ Play demo) or next to 🔊 in the tour controls (mid-demo — it applies from th
 
 | Voice | Needs | First play of a line | What you hear |
 |---|---|---|---|
-| **Auto** *(default with key)* | `ELEVENLABS_API_KEY` | ~1.5 s | ElevenLabs while credits last (Lily for English, Alice for Japanese), then Gemini if its guard allows, then the browser voice. The picker shows which engine spoke each line. |
-| ElevenLabs · Lily / George / Brian / Alice / Charlotte | `ELEVENLABS_API_KEY` | ~1.5 s | A curated set of English and Japanese premade voices. Lily is the English default. |
+| **Auto** *(default with key)* | `ELEVENLABS_API_KEY` | ~1.5 s | ElevenLabs while credits last (your own `ELEVENLABS_VOICE_ID` voice, or Lily, for English; Alice for Japanese), then Gemini if its guard allows, then the browser voice. The picker shows which engine spoke each line. |
+| ElevenLabs · Lily / George / Brian / Alice / Charlotte | `ELEVENLABS_API_KEY` | ~1.5 s | A curated set of English and Japanese premade voices. Lily is the English default. A non-curated `ELEVENLABS_VOICE_ID` is listed first as "Your voice". |
 | Gemini · Aoede / Sulafat / Achernar / Vindemiatrix / Gacrux / Achird | `GEMINI_API_KEY` | ~3–6 s | Gemini TTS reading the step text; six voices picked by ear (breezy, warm, soft, gentle, mature, friendly) |
 | Gemini Argon | `GEMINI_API_KEY` | ~7–17 s | Argon rewrites the step as short wellbeing commentary, then Gemini TTS reads it |
 | 日本語 · Sulafat / Achird | `GEMINI_API_KEY` | ~6–7 s | Japanese: each step is translated (`gemini-3.8-flash`), then spoken in Japanese |
